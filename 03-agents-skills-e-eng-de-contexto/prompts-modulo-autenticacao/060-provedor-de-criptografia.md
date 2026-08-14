@@ -1,0 +1,3 @@
+modules/auth/src/user/provider/crypto.provider.ts
+
+Crie uma implementação usando a biblioteca do NPM chamada Bcrypt para implementar a criptografia de senha a partir dos comportamentos dessa interface. Não modifique nada na interface proposta, simplesmente crie dentro da pasta do módulo de autenticação no backend uma implementação usando o Bcrypt para que essa implementação seja usada posteriormente para chamar o caso de uso.

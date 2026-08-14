@@ -1,0 +1,20 @@
+{
+  "name": "instagram-lista-videos-csv-mcp",
+  "version": "1.0.0",
+  "description": "MCP server that fetches all videos from a public Instagram account (no auth) and stores them as CSV.",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "instagram-lista-videos-csv-mcp": "index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^4.4.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

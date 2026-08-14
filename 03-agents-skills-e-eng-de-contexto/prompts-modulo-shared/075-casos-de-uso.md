@@ -1,0 +1,1 @@
+Alterar a nomenclatura do arquivo é para usar kebab-case, né, tudo letra minúscula, com hífen, da mesma forma que você criou o nome do teste. Eu quero que o nome do arquivo seja use-case.ts.

@@ -1,0 +1,4 @@
+modules/auth/src/user/provider/user.repository.ts
+packages/shared/src/db/crud.repository.ts
+
+Esse arquivo está vazio e deve contemplar a interface relacionada a repositório de usuário. Usar como base o repositório de CRUD, que já tem o Create, o Update, o Delete, o FindByID e o FindAll, e simplesmente resolver os dados genéricos para apontar para a entidade Usuário. Então, eu vou trabalhar sempre com a entidade Usuário, que já foi criada em um prompt anterior. Então, implementar dentro desse arquivo vazio o repositório de Usuário como uma interface. Eu não quero nada de implementação, eu quero só a interface.

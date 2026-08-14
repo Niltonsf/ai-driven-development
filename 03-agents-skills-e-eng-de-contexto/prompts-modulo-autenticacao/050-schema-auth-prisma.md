@@ -1,0 +1,3 @@
+.agents/skills/backend-sync-module-prisma/SKILL.md
+
+Altere essa skill para dizer que o padrão de nomenclatura de tabelas dentro do banco de dados vai ser com letras minúsculas, com underline e, se possível, colocar o nome da tabela no plural. Como user viraria users e assim sucessivamente. Então colocar essas instruções dentro da skill para que, quando ele for fazer essa sincronia, ele use esse padrão dentro do esquema do Prisma.

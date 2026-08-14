@@ -1,0 +1,23 @@
+{
+  "name": "video-transcricao-mcp",
+  "version": "1.0.0",
+  "description": "MCP que extrai um áudio comprimido dos vídeos (ffmpeg portável) e os transcreve com a API da OpenAI, gravando um .txt ao lado de cada vídeo.",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "video-transcricao-mcp": "index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "dotenv": "^16.4.5",
+    "ffmpeg-static": "^5.2.0",
+    "openai": "^4.67.0",
+    "zod": "^3.23.8"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

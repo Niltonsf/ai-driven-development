@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "instagram-lista-videos-csv": {
+      "command": "node",
+      "args": [
+        "/Users/niltonsf/Desktop/ai-driven-devopment/projeto-0-usando-mcp-skills-spec/projeto-instagram/mcps/instagram-lista-videos-csv/index.js"
+      ]
+    },
+    "instagram-top-videos-download": {
+      "command": "node",
+      "args": [
+        "/Users/niltonsf/Desktop/ai-driven-devopment/projeto-0-usando-mcp-skills-spec/projeto-instagram/mcps/instagram-top-videos-download/index.js"
+      ]
+    }
+  }
+}
