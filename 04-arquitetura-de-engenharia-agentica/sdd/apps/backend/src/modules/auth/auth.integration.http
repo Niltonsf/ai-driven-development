@@ -1,0 +1,108 @@
+@baseUrl = http://localhost:4000
+@scenarioVersion = 1
+
+### Registrar usuário com dados válidos — espera 201
+# @name registerUser
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "João Silva",
+  "email": "joao.{{scenarioVersion}}@email.com",
+  "password": "Strong@123"
+}
+
+### Tentar registrar com o mesmo e-mail — espera 409 (domain error: already registered)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "João Silva",
+  "email": "joao.{{scenarioVersion}}@email.com",
+  "password": "Strong@123"
+}
+
+### Tentar registrar com nome inválido — espera 422 (validation error)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "",
+  "email": "outro.{{scenarioVersion}}@email.com",
+  "password": "Strong@123"
+}
+
+### Tentar registrar com e-mail inválido — espera 422 (validation error)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Maria Souza",
+  "email": "nao-e-um-email",
+  "password": "Strong@123"
+}
+
+### Tentar registrar com senha fraca — espera 422 (validation error)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Carlos Lima",
+  "email": "carlos.{{scenarioVersion}}@email.com",
+  "password": "123456"
+}
+
+### Tentar registrar com vários erros — espera 422 (validation error)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Carlos",
+  "email": "carlos.email.com",
+  "password": "123456"
+}
+
+### Login com credenciais válidas — espera 200 com { token, user }
+# @name loginUser
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "joao.{{scenarioVersion}}@email.com",
+  "password": "Strong@123"
+}
+
+### Login com e-mail inexistente — espera 401 (user.credentials.invalid)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "nao-existe.{{scenarioVersion}}@email.com",
+  "password": "Strong@123"
+}
+
+### Login com senha incorreta — espera 401 (user.credentials.invalid)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "joao.{{scenarioVersion}}@email.com",
+  "password": "Wrong@999"
+}
+
+### Login com e-mail inválido — espera 422 (validation error)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "nao-e-um-email",
+  "password": "Strong@123"
+}
+
+### Login com corpo incompleto — espera 422 (validation error)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": ""
+}

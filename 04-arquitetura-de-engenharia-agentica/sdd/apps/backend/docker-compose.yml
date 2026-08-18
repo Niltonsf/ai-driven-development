@@ -1,0 +1,24 @@
+name: sdd-sdd-backend-db
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sdd-sdd-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sdd_sdd
+      POSTGRES_PASSWORD: docker
+      POSTGRES_DB: sdd_sdd_db
+    ports:
+      - '6321:5432'
+    volumes:
+      - sdd-sdd-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sdd_sdd']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  sdd-sdd-postgres-data:
+    driver: local

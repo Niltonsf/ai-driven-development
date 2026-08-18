@@ -1,0 +1,122 @@
+@baseUrl = http://localhost:4000
+@scenarioVersion = 1
+
+### Autenticar para obter token (necessário para endpoints protegidos)
+# @name loginUser
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "joao.1@email.com",
+  "password": "Strong@123"
+}
+
+@token = {{loginUser.response.body.token}}
+
+# ─── Criação ──────────────────────────────────────────────────────────────────
+
+### Criar usuário com dados válidos — espera 201
+# @name createUser
+POST {{baseUrl}}/users
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Maria Souza",
+  "email": "maria.{{scenarioVersion}}@email.com",
+  "password": "Strong@123"
+}
+
+### Criar usuário com nome inválido — espera 422
+POST {{baseUrl}}/users
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Maria",
+  "email": "maria.invalida@email.com",
+  "password": "Strong@123"
+}
+
+### Criar usuário com e-mail inválido — espera 422
+POST {{baseUrl}}/users
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Carlos Lima",
+  "email": "nao-e-um-email",
+  "password": "Strong@123"
+}
+
+### Criar sem autenticação — espera 401
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Sem Auth",
+  "email": "semauth@email.com",
+  "password": "Strong@123"
+}
+
+# ─── Consulta ─────────────────────────────────────────────────────────────────
+
+### Listar usuários paginados — espera 200 com { items, total, page, perPage }
+GET {{baseUrl}}/users?page=1&perPage=10
+Authorization: Bearer {{token}}
+
+### Listar segunda página
+GET {{baseUrl}}/users?page=2&perPage=5
+Authorization: Bearer {{token}}
+
+### Obter usuário por id — espera 200
+# @name getUser
+GET {{baseUrl}}/users/{{createUser.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Obter usuário com id inexistente — espera 200 com null (repositório retorna null diretamente)
+GET {{baseUrl}}/users/f47ac10b-58cc-4372-a567-0e02b2c3d479
+Authorization: Bearer {{token}}
+
+# ─── Atualização ──────────────────────────────────────────────────────────────
+
+### Atualizar usuário — espera 200
+PUT {{baseUrl}}/users/{{createUser.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Maria Souza Editada",
+  "email": "maria.{{scenarioVersion}}@email.com"
+}
+
+### Atualizar senha — espera 200
+PUT {{baseUrl}}/users/{{createUser.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Maria Souza Editada",
+  "email": "maria.{{scenarioVersion}}@email.com",
+  "password": "NewStrong@456"
+}
+
+### Atualizar usuário com nome inválido — espera 422
+PUT {{baseUrl}}/users/{{createUser.response.body.id}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Maria",
+  "email": "maria.{{scenarioVersion}}@email.com"
+}
+
+# ─── Exclusão ─────────────────────────────────────────────────────────────────
+
+### Excluir usuário — espera 204
+DELETE {{baseUrl}}/users/{{createUser.response.body.id}}
+Authorization: Bearer {{token}}
+
+### Excluir usuário inexistente — espera 404 (user.not_found)
+DELETE {{baseUrl}}/users/f47ac10b-58cc-4372-a567-0e02b2c3d479
+Authorization: Bearer {{token}}
