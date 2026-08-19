@@ -1,0 +1,23 @@
+import type { ReactNode } from "react";
+{{IF_LOGO_IN_TOPBAR}}import { Logo } from "./logo.component";{{END_IF_LOGO_IN_TOPBAR}}
+
+export function TopBar({ children }: { children?: ReactNode }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--shell-topbar-gap)",
+        flex: 1,
+        paddingTop: "var(--shell-topbar-py)",
+        paddingBottom: "var(--shell-topbar-py)",
+        paddingLeft: "var(--shell-topbar-px)",
+        paddingRight: "var(--shell-topbar-px)",
+        borderBottom: "var(--shell-topbar-inner-border)",
+      }}
+    >
+      {{IF_LOGO_IN_TOPBAR}}<span className="{{LOGO_TOPBAR_VISIBILITY_CLASS}}"><Logo placement="topbar" /></span>{{END_IF_LOGO_IN_TOPBAR}}
+      <div style={{ flex: 1 }}>{children}</div>
+    </div>
+  );
+}

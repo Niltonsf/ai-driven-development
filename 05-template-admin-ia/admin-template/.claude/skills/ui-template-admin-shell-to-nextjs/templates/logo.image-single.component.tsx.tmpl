@@ -1,0 +1,18 @@
+type LogoProps = {
+  /* "aside" (default) | "topbar" — preserva a API; um único asset não muda por placement. */
+  placement?: "aside" | "topbar";
+};
+
+export function Logo({ placement: _placement = "aside" }: LogoProps = {}) {
+  void _placement;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center" }}>
+      <img
+        src="{{LOGO_FULL_SRC}}"
+        alt="{{LOGO_ALT}}"
+        {{LOGO_WIDTH_HEIGHT_ATTRS}}
+        style={{ height: "{{LOGO_HEIGHT}}", width: "auto", display: "block" }}
+      />
+    </span>
+  );
+}

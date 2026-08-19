@@ -1,0 +1,167 @@
+/* admin-shell.tokens.css — gerado por ui-template-admin-shell-to-nextjs
+ * Tokens estruturais do shell. Não alterar manualmente; re-rodar a skill se o template mudar.
+ */
+
+:root {
+  --shell-aside-w-expanded: 290px;
+  --shell-aside-w-mini: 90px;
+  --shell-topbar-h: auto;
+  --shell-footer-h: 0px;
+
+  --shell-bg: #ffffff;
+  --shell-aside-bg: #ffffff;
+  --shell-aside-text: #344054;
+  --shell-topbar-bg: #ffffff;
+  --shell-topbar-text: #344054;
+  --shell-footer-bg: transparent;
+  --shell-border: #e5e7eb;
+  --shell-text: #101828;
+
+  --shell-font-family: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --shell-font-size-base: 14px;
+
+  --shell-bp-md: 768px;
+  --shell-bp-lg: 1024px;
+
+  /* Logo region (sidebar-header) — valores literais do template original */
+  --shell-aside-header-pt: 2rem;
+  --shell-aside-header-pb: 1.75rem;
+  --shell-aside-header-px-expanded: 0px;
+  --shell-aside-header-px-mini: 0px;
+  --shell-aside-header-gap: 0.5rem;
+  --shell-aside-header-align: center;
+
+  /* Menu toggle button (wrapper) — valores literais do template original. */
+  --shell-menu-toggle-w: 2.5rem;
+  --shell-menu-toggle-h: 2.5rem;
+  --shell-menu-toggle-padding: 0px;
+  --shell-menu-toggle-bg: transparent;
+  --shell-menu-toggle-bg-hover: #f3f4f6;
+  --shell-menu-toggle-border: 1px solid transparent;
+  --shell-menu-toggle-radius: 0.5rem;
+  --shell-menu-toggle-color: #6b7280;
+
+  /* Topbar — espaçamentos literais do template (Fase 1.2.1 e 1.2.1.1). */
+  --shell-topbar-px: 0.75rem;       /* px-3 */
+  --shell-topbar-py: 0.75rem;       /* py-3 */
+  --shell-topbar-gap: 0.5rem;       /* gap-2 */
+  --shell-topbar-outer-px: 0px;     /* outer xl:px-6 — emitido via @media abaixo */
+  --shell-topbar-toggle-mr: 0px;
+  --shell-topbar-inner-border: 1px solid #e5e7eb;
+
+  /* Breakpoint mobile↔desktop do menu (Fase 1.7) — xl no template TailAdmin. */
+  --shell-menu-bp: 1280px;
+
+  /* Main content area — espaçamentos literais do template (Fase 1.2.1.2). */
+  --shell-main-px: 1rem;            /* p-4 */
+  --shell-main-py: 1rem;            /* p-4 */
+  --shell-main-gap: 1rem;
+  --shell-main-max-w: 1536px;       /* max-w-screen-2xl */
+
+  /* ========================================================================
+   * adminMenu — tokens da navegação lateral (sidebar)
+   * Extraídos literalmente do CSS do template (style-d1d3666d56.css).
+   * Namespace dedicado para não colidir com tokens do shell.
+   * ====================================================================== */
+
+  /* Cores — light theme (template default). */
+  --adminMenu-bg: #ffffff;
+  --adminMenu-bgHover: #f2f4f7;          /* gray-100 */
+  --adminMenu-bgActive: #ecf3ff;         /* brand-50 */
+  --adminMenu-text: #344054;             /* gray-700 */
+  --adminMenu-textHover: #344054;        /* gray-700 (mantém) */
+  --adminMenu-textActive: #465fff;       /* brand-500 */
+  --adminMenu-icon: #667085;             /* gray-500 */
+  --adminMenu-iconHover: #344054;        /* gray-700 */
+  --adminMenu-iconActive: #465fff;       /* brand-500 */
+  --adminMenu-groupTitle: #98a2b3;       /* gray-400 */
+  --adminMenu-divider: #e5e7eb;          /* gray-200 */
+  --adminMenu-badgeBg: #ecfdf3;          /* success-50 */
+  --adminMenu-badgeBgActive: #d1fadf;    /* success-100 */
+  --adminMenu-badgeText: #039855;        /* success-600 */
+
+  /* Spacing literal do template. */
+  --adminMenu-itemGap: 0.75rem;          /* gap-3 (entre ícone e label) */
+  --adminMenu-itemPx: 0.75rem;           /* px-3 */
+  --adminMenu-itemPy: 0.5rem;            /* py-2 */
+  --adminMenu-itemRadius: 0.5rem;        /* radius-lg */
+  --adminMenu-dropdownPx: 0.75rem;       /* px-3 */
+  --adminMenu-dropdownPy: 0.625rem;      /* py-2.5 */
+  --adminMenu-dropdownIndent: 2.25rem;   /* pl-9 */
+  --adminMenu-dropdownGap: 0.25rem;      /* gap-1 */
+  --adminMenu-groupGap: 1rem;            /* mb-4 entre título e lista */
+  --adminMenu-groupSpacing: 1.5rem;      /* mb-6 entre grupos */
+  --adminMenu-iconSize: 1.5rem;          /* w-6 h-6 (svg 24x24) */
+  --adminMenu-arrowSize: 1.25rem;        /* w-5 h-5 */
+
+  /* Tipografia. */
+  --adminMenu-itemFontSize: 0.875rem;    /* text-sm */
+  --adminMenu-itemFontWeight: 500;       /* font-medium */
+  --adminMenu-dropdownFontSize: 14px;    /* text-theme-sm */
+  --adminMenu-groupTitleFontSize: 0.75rem; /* text-xs */
+  --adminMenu-groupTitleLetter: 0;
+  --adminMenu-badgeFontSize: 0.75rem;    /* text-xs */
+
+  /* Transição literal — `transition-all duration-300` no <aside>. */
+  --adminMenu-duration: 300ms;
+  --adminMenu-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark mode tokens — template usa `.dark` no <html>. */
+:root.dark,
+.dark :root,
+html.dark {
+  --adminMenu-bg: #000000;
+  --adminMenu-bgHover: rgba(255, 255, 255, 0.05);
+  --adminMenu-bgActive: rgba(70, 95, 255, 0.12);   /* brand-500 @ 12% */
+  --adminMenu-text: #d0d5dd;             /* gray-300 */
+  --adminMenu-textHover: #d0d5dd;
+  --adminMenu-textActive: #7592ff;       /* brand-400 */
+  --adminMenu-icon: #98a2b3;             /* gray-400 */
+  --adminMenu-iconHover: #d0d5dd;        /* gray-300 */
+  --adminMenu-iconActive: #7592ff;       /* brand-400 */
+  --adminMenu-groupTitle: #98a2b3;
+  --adminMenu-divider: #1f2937;          /* gray-800 */
+  --adminMenu-badgeBg: rgba(18, 183, 106, 0.15);
+  --adminMenu-badgeBgActive: rgba(18, 183, 106, 0.20);
+  --adminMenu-badgeText: #12b76a;        /* success-500 */
+}
+
+/* Visibilidade do <Logo> por placement (Fase 1.4.0). */
+.logo-aside-only  { display: none; }
+.logo-topbar-only { display: inline-flex; }
+@media (min-width: 1280px) {
+  .logo-aside-only  { display: inline-flex; }
+  .logo-topbar-only { display: none; }
+}
+
+/* Sobrescrever tokens condicionais por breakpoint (template usa md:, lg:, xl:). */
+@media (min-width: 640px) {
+  :root {
+    --shell-topbar-gap: 1rem;       /* sm:gap-4 */
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --shell-main-px: 1.5rem;        /* md:p-6 */
+    --shell-main-py: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --shell-topbar-py: 1rem;        /* lg:py-4 */
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --shell-menu-toggle-w: 2.75rem;
+    --shell-menu-toggle-h: 2.75rem;
+    --shell-menu-toggle-border: 1px solid #e5e7eb;
+    --shell-topbar-px: 0px;          /* xl:px-0 inner */
+    --shell-topbar-outer-px: 1.5rem; /* xl:px-6 outer */
+    --shell-topbar-inner-border: 1px solid transparent;
+  }
+}

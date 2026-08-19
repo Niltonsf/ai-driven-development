@@ -1,0 +1,36 @@
+"use client";
+
+import { useMenuState } from "./use-menu-state.hook";
+
+type LogoProps = {
+  /* "aside" (default): escolhe entre `full` e `icon` conforme o estado do menu (`mini` → icon).
+   * "topbar":          usa o asset `mobile` se existir; senão `full`. */
+  placement?: "aside" | "topbar";
+};
+
+export function Logo({ placement = "aside" }: LogoProps = {}) {
+  const { mode, isMobile } = useMenuState();
+  const isMini = !isMobile && mode === "mini";
+
+  /* Resolução de src — derivada da Fase 1.4.3:
+   *   placement=topbar → mobile (se existir) ou full
+   *   placement=aside  → mini ? icon : full
+   * Quando alguma role não foi capturada no template, cai no `full`. */
+  const src =
+    placement === "topbar"
+      ? "{{LOGO_TOPBAR_SRC}}" // mobile asset; gerador deve cair em full quando role=mobile não existe
+      : isMini
+        ? "{{LOGO_ICON_SRC}}" // mini asset; gerador deve cair em full quando role=icon não existe
+        : "{{LOGO_FULL_SRC}}";
+
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center" }}>
+      <img
+        src={src}
+        alt="{{LOGO_ALT}}"
+        {{LOGO_WIDTH_HEIGHT_ATTRS}}
+        style={{ height: "{{LOGO_HEIGHT}}", width: "auto", display: "block" }}
+      />
+    </span>
+  );
+}

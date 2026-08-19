@@ -1,0 +1,111 @@
+import type { TopbarConfig } from "./topbar.types";
+
+/**
+ * Dados materializados a partir do HTML do template demo.tailadmin.com (index.html).
+ * Itens, labels e nomes mantidos no idioma original (en).
+ */
+export const topbarConfig: TopbarConfig = {
+  brand: {
+    logoSrc: "/template/admin/logo/logo-8ed3242df5.svg",
+    logoDarkSrc: "/template/admin/logo/logo-8ed3242df5.svg",
+    href: "/",
+    alt: "Logo",
+  },
+  search: {
+    placeholder: "Search or type command...",
+    shortcut: { primary: "⌘", secondary: "K" },
+  },
+  notifications: [
+    {
+      id: "n1",
+      avatarSrc: "/template/admin/topbar/user-02.jpg",
+      statusColor: "success",
+      actorName: "Terry Franci",
+      message: "requests permission to change",
+      projectName: "Project - Nganter App",
+      category: "Project",
+      timeAgo: "5 min ago",
+    },
+    {
+      id: "n2",
+      avatarSrc: "/template/admin/topbar/user-03.jpg",
+      statusColor: "success",
+      actorName: "Alena Franci",
+      message: "requests permission to change",
+      projectName: "Project - Nganter App",
+      category: "Project",
+      timeAgo: "8 min ago",
+    },
+    {
+      id: "n3",
+      avatarSrc: "/template/admin/topbar/user-04.jpg",
+      statusColor: "success",
+      actorName: "Jocelyn Kenter",
+      message: "requests permission to change",
+      projectName: "Project - Nganter App",
+      category: "Project",
+      timeAgo: "15 min ago",
+    },
+    {
+      id: "n4",
+      avatarSrc: "/template/admin/topbar/user-05.jpg",
+      statusColor: "error",
+      actorName: "Brandon Philips",
+      message: "requests permission to change",
+      projectName: "Project - Nganter App",
+      category: "Project",
+      timeAgo: "1 hr ago",
+    },
+    {
+      id: "n5",
+      avatarSrc: "/template/admin/topbar/user-02.jpg",
+      statusColor: "success",
+      actorName: "Terry Franci",
+      message: "requests permission to change",
+      projectName: "Project - Nganter App",
+      category: "Project",
+      timeAgo: "5 min ago",
+    },
+    {
+      id: "n6",
+      avatarSrc: "/template/admin/topbar/user-03.jpg",
+      statusColor: "success",
+      actorName: "Alena Franci",
+      message: "requests permission to change",
+      projectName: "Project - Nganter App",
+      category: "Project",
+      timeAgo: "8 min ago",
+    },
+    {
+      id: "n7",
+      avatarSrc: "/template/admin/topbar/user-04.jpg",
+      statusColor: "success",
+      actorName: "Jocelyn Kenter",
+      message: "requests permission to change",
+      projectName: "Project - Nganter App",
+      category: "Project",
+      timeAgo: "15 min ago",
+    },
+    {
+      id: "n8",
+      avatarSrc: "/template/admin/topbar/user-05.jpg",
+      statusColor: "error",
+      actorName: "Brandon Philips",
+      message: "requests permission to change",
+      projectName: "Project - Nganter App",
+      category: "Project",
+      timeAgo: "1 hr ago",
+    },
+  ],
+  user: {
+    avatarSrc: "/template/admin/topbar/owner.png",
+    shortName: "Musharof",
+    fullName: "Musharof Chowdhury",
+    email: "randomuser@pimjo.com",
+    menuItems: [
+      { id: "edit-profile", label: "Edit profile", href: "#", iconKey: "edit-profile" },
+      { id: "account-settings", label: "Account settings", href: "#", iconKey: "account-settings" },
+      { id: "support", label: "Support", href: "#", iconKey: "support" },
+    ],
+  },
+};

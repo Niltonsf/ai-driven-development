@@ -1,0 +1,11 @@
+import type { ReactNode } from "react";
+import { MenuStateProvider } from "{{IMPORT_PREFIX}}/menu-state.context";
+import { AdminShell } from "{{IMPORT_PREFIX}}/admin-shell.component";
+
+export default function PrivateLayout({ children }: { children: ReactNode }) {
+  return (
+    <MenuStateProvider>
+      <AdminShell>{children}</AdminShell>
+    </MenuStateProvider>
+  );
+}

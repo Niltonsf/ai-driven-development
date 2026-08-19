@@ -1,0 +1,39 @@
+"use client";
+
+{{TOGGLE_ICON_IMPORTS}}
+import { useMenuState } from "./use-menu-state.hook";
+
+export function MenuToggle() {
+  const { toggle, isMobile, mode } = useMenuState();
+  const isOpen = isMobile ? mode === "mobile-open" : mode === "expanded";
+  return (
+    <button
+      type="button"
+      aria-label={isOpen ? "Fechar menu" : "Abrir menu"}
+      aria-expanded={isOpen}
+      onClick={toggle}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "var(--shell-menu-toggle-w)",
+        height: "var(--shell-menu-toggle-h)",
+        padding: "var(--shell-menu-toggle-padding)",
+        background: "var(--shell-menu-toggle-bg)",
+        border: "var(--shell-menu-toggle-border)",
+        borderRadius: "var(--shell-menu-toggle-radius)",
+        color: "var(--shell-menu-toggle-color)",
+        cursor: "pointer",
+        transition: "background 150ms ease",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = "var(--shell-menu-toggle-bg-hover)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = "var(--shell-menu-toggle-bg)";
+      }}
+    >
+      {isOpen ? ({{TOGGLE_ICON_OPEN_JSX}}) : ({{TOGGLE_ICON_CLOSED_JSX}})}
+    </button>
+  );
+}

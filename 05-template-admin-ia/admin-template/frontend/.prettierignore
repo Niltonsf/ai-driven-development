@@ -1,0 +1,15 @@
+# build artifacts
+.next
+out
+dist
+build
+coverage
+
+# deps
+node_modules
+
+# env / lockfiles
+.env*
+package-lock.json
+pnpm-lock.yaml
+yarn.lock

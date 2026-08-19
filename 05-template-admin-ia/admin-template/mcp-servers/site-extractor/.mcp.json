@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "site-extractor": {
+      "command": "node",
+      "args": ["./src/mcp-server.mjs"]
+    }
+  }
+}

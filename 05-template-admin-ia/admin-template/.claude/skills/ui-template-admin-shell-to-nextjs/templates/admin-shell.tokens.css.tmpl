@@ -1,0 +1,89 @@
+/* admin-shell.tokens.css — gerado por ui-template-admin-shell-to-nextjs
+ * Tokens estruturais do shell. Não alterar manualmente; re-rodar a skill se o template mudar.
+ */
+
+:root {
+  --shell-aside-w-expanded: {{ASIDE_W_EXPANDED_PX}};
+  --shell-aside-w-mini: {{ASIDE_W_MINI_PX}};
+  --shell-topbar-h: {{TOPBAR_H_PX}};
+  --shell-footer-h: {{FOOTER_H_PX}};
+
+  --shell-bg: {{SHELL_BG}};
+  --shell-aside-bg: {{ASIDE_BG}};
+  --shell-aside-text: {{ASIDE_TEXT}};
+  --shell-topbar-bg: {{TOPBAR_BG}};
+  --shell-topbar-text: {{TOPBAR_TEXT}};
+  --shell-footer-bg: {{FOOTER_BG}};
+  --shell-border: {{SHELL_BORDER}};
+  --shell-text: {{SHELL_TEXT}};
+
+  --shell-font-family: {{FONT_FAMILY}};
+  --shell-font-size-base: {{FONT_SIZE_BASE_PX}};
+
+  --shell-bp-md: {{BP_MD_PX}};
+  --shell-bp-lg: {{BP_LG_PX}};
+
+  /* Logo region (sidebar-header) — valores literais do template original */
+  --shell-aside-header-pt: {{ASIDE_HEADER_PT}};
+  --shell-aside-header-pb: {{ASIDE_HEADER_PB}};
+  --shell-aside-header-px-expanded: {{ASIDE_HEADER_PX_EXPANDED}};
+  --shell-aside-header-px-mini: {{ASIDE_HEADER_PX_MINI}};
+  --shell-aside-header-gap: {{ASIDE_HEADER_GAP}};
+  --shell-aside-header-align: {{ASIDE_HEADER_ALIGN}};
+
+  /* Menu toggle button (wrapper) — valores literais do template original.
+   * Ausentes no template original viram `1px solid transparent`/`transparent`/`0`
+   * (NUNCA `none` no border — preserva footprint sem layout shift). */
+  --shell-menu-toggle-w: {{MENU_TOGGLE_W}};
+  --shell-menu-toggle-h: {{MENU_TOGGLE_H}};
+  --shell-menu-toggle-padding: {{MENU_TOGGLE_PADDING}};
+  --shell-menu-toggle-bg: {{MENU_TOGGLE_BG}};
+  --shell-menu-toggle-bg-hover: {{MENU_TOGGLE_BG_HOVER}};
+  --shell-menu-toggle-border: {{MENU_TOGGLE_BORDER}};
+  --shell-menu-toggle-radius: {{MENU_TOGGLE_RADIUS}};
+  --shell-menu-toggle-color: {{MENU_TOGGLE_COLOR}};
+
+  /* Topbar — espaçamentos literais do template (Fase 1.2.1 e 1.2.1.1).
+   * NUNCA usar 1rem por default; cada valor sai do snippet original. */
+  --shell-topbar-px: {{TOPBAR_PX}};
+  --shell-topbar-py: {{TOPBAR_PY}};
+  --shell-topbar-gap: {{TOPBAR_GAP}};
+  --shell-topbar-outer-px: {{TOPBAR_OUTER_PX}};
+  --shell-topbar-toggle-mr: {{TOPBAR_TOGGLE_MR}};
+  --shell-topbar-inner-border: {{TOPBAR_INNER_BORDER}};
+
+  /* Breakpoint mobile↔desktop do menu (Fase 1.7). Literal do template — não 768 por default. */
+  --shell-menu-bp: {{MENU_BP_PX}};
+
+  /* Main content area — espaçamentos literais do template (Fase 1.2.1.2).
+   * Sintoma a evitar: conteúdo colado nas bordas. */
+  --shell-main-px: {{MAIN_PX}};
+  --shell-main-py: {{MAIN_PY}};
+  --shell-main-gap: {{MAIN_GAP}};
+  --shell-main-max-w: {{MAIN_MAX_W}};
+}
+
+/* Visibilidade do <Logo> por placement (Fase 1.4.0).
+ *
+ * Bloco emitido APENAS quando a tabela `logo placement` da Fase 1 tem duas linhas
+ * com breakpoints complementares (ex.: aside ≥xl, topbar <xl). Quando há um único
+ * placement, este bloco DEVE ser omitido — sua presença ociosa é violação (Fase 5.4.0.1).
+ *
+ * Implementação fixa, parametrizada apenas pelo breakpoint do menu (`--shell-menu-bp`):
+ *
+ * <!-- BEGIN logo-visibility (emitir só se EMIT_LOGO_VISIBILITY === true) -->
+ * .logo-aside-only   { display: none; }
+ * .logo-topbar-only  { display: inline-flex; }
+ * @media (min-width: {{MENU_BP_PX}}) {
+ *   .logo-aside-only   { display: inline-flex; }
+ *   .logo-topbar-only  { display: none; }
+ * }
+ * <!-- END logo-visibility -->
+ *
+ * Aliases legados aceitos: `.logo-desktop-only` ↔ `.logo-aside-only`,
+ *                          `.logo-mobile-only`  ↔ `.logo-topbar-only`. */
+{{LOGO_VISIBILITY_RULES}}
+
+/* Sobrescrever tokens condicionais (borda do toggle / padding do topbar)
+ * quando o template aplica utilities de breakpoint (`xl:border`, `lg:px-6`). */
+{{TOKEN_BREAKPOINT_OVERRIDES}}

@@ -1,0 +1,367 @@
+@import "tailwindcss";
+@import "../shared/template/admin/admin-shell.tokens.css";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* ui-template-admin-primitives-to-nextjs — tokens (light theme, single-theme).
+ * Extraídos literalmente do CSS do template demo.tailadmin.com (style-d1d3666d56.css).
+ * Namespace `ui-*` para não colidir com defaults Tailwind. */
+@theme {
+  --color-ui-brand-50: #ecf3ff;
+  --color-ui-brand-100: #dde9ff;
+  --color-ui-brand-200: #c2d6ff;
+  --color-ui-brand-300: #9cb9ff;
+  --color-ui-brand-400: #7592ff;
+  --color-ui-brand-500: #465fff;
+  --color-ui-brand-600: #3641f5;
+  --color-ui-brand-800: #252dae;
+  --color-ui-brand-950: #161950;
+
+  --color-ui-gray-50: #f9fafb;
+  --color-ui-gray-100: #f2f4f7;
+  --color-ui-gray-200: #e4e7ec;
+  --color-ui-gray-300: #d0d5dd;
+  --color-ui-gray-400: #98a2b3;
+  --color-ui-gray-500: #667085;
+  --color-ui-gray-600: #475467;
+  --color-ui-gray-700: #344054;
+  --color-ui-gray-800: #1d2939;
+  --color-ui-gray-900: #101828;
+  --color-ui-gray-950: #0c111d;
+
+  --color-ui-success-50: #ecfdf3;
+  --color-ui-success-100: #d1fadf;
+  --color-ui-success-300: #6ce9a6;
+  --color-ui-success-500: #12b76a;
+  --color-ui-success-600: #039855;
+  --color-ui-success-700: #027a48;
+
+  --color-ui-error-50: #fef3f2;
+  --color-ui-error-300: #fda29b;
+  --color-ui-error-400: #f97066;
+  --color-ui-error-500: #f04438;
+  --color-ui-error-600: #d92d20;
+  --color-ui-error-700: #b42318;
+
+  --color-ui-warning-50: #fffaeb;
+  --color-ui-warning-400: #fdb022;
+  --color-ui-warning-500: #f79009;
+  --color-ui-warning-600: #dc6803;
+  --color-ui-warning-700: #b54708;
+
+  --text-ui-xs: 12px;
+  --text-ui-xs--line-height: 18px;
+  --text-ui-sm: 14px;
+  --text-ui-sm--line-height: 20px;
+  --text-ui-xl: 20px;
+  --text-ui-xl--line-height: 30px;
+
+  --shadow-ui-xs: 0px 1px 2px 0px rgba(16, 24, 40, 0.05);
+  --shadow-ui-sm: 0px 1px 3px 0px rgba(16, 24, 40, 0.1), 0px 1px 2px 0px rgba(16, 24, 40, 0.06);
+  --shadow-ui-focus-brand: 0px 0px 0px 4px rgba(70, 95, 255, 0.12);
+  --shadow-ui-focus-error: 0px 0px 0px 4px rgba(240, 68, 56, 0.1);
+  --shadow-ui-focus-success: 0px 0px 0px 4px rgba(18, 183, 106, 0.1);
+}
+
+/* ui-template-admin-composites-to-nextjs — composite tokens (light theme).
+ * Expandindo `ui.*` com subgrupos semânticos. Valores extraídos do template
+ * demo.tailadmin.com (rounded-2xl, p-5/6, gray-100/200, shadow-theme-lg etc.). */
+@theme {
+  /* card */
+  --color-ui-card-bg: #ffffff;
+  --color-ui-card-border: #e4e7ec;
+  --color-ui-card-headerBg: #f9fafb;
+  --color-ui-card-fg: #1d2939;
+  --color-ui-card-fgMuted: #667085;
+  --radius-ui-card: 16px;
+  --radius-ui-cardLg: 24px;
+  --shadow-ui-card: 0px 1px 3px 0px rgba(16, 24, 40, 0.05);
+  --shadow-ui-cardLg: 0px 12px 34px -10px rgba(20, 25, 36, 0.10);
+
+  /* breadcrumb */
+  --color-ui-breadcrumb-link: #667085;
+  --color-ui-breadcrumb-activeText: #1d2939;
+  --color-ui-breadcrumb-separator: #98a2b3;
+
+  /* modal */
+  --color-ui-modal-bg: #ffffff;
+  --color-ui-modal-overlay: rgba(152, 162, 179, 0.50);
+  --color-ui-modal-closeBg: #f2f4f7;
+  --color-ui-modal-closeFg: #98a2b3;
+  --color-ui-modal-closeHoverBg: #e4e7ec;
+  --color-ui-modal-closeHoverFg: #475467;
+
+  /* drawer */
+  --color-ui-drawer-bg: #ffffff;
+  --color-ui-drawer-border: #e4e7ec;
+
+  /* table */
+  --color-ui-table-headerBg: #f9fafb;
+  --color-ui-table-rowBorder: #f2f4f7;
+  --color-ui-table-rowHoverBg: #f9fafb;
+  --color-ui-table-headerFg: #667085;
+  --color-ui-table-cellFg: #344054;
+  --color-ui-table-cellFgStrong: #1d2939;
+
+  /* empty / error state */
+  --color-ui-emptyState-icon: #98a2b3;
+  --color-ui-emptyState-title: #1d2939;
+  --color-ui-emptyState-description: #667085;
+  --color-ui-errorState-icon: #f04438;
+
+  /* skeleton */
+  --color-ui-skeleton-bg: #f2f4f7;
+
+  /* tabs */
+  --color-ui-tabs-trigger: #667085;
+  --color-ui-tabs-triggerActive: #465fff;
+  --color-ui-tabs-indicator: #465fff;
+  --color-ui-tabs-bg: #ffffff;
+
+  /* segmented control */
+  --color-ui-segmented-bg: #f2f4f7;
+  --color-ui-segmented-itemActiveBg: #ffffff;
+  --color-ui-segmented-itemFg: #475467;
+  --color-ui-segmented-itemActiveFg: #1d2939;
+
+  /* stepper */
+  --color-ui-stepper-stepBg: #f2f4f7;
+  --color-ui-stepper-stepFg: #98a2b3;
+  --color-ui-stepper-stepActiveBg: #465fff;
+  --color-ui-stepper-stepActiveFg: #ffffff;
+  --color-ui-stepper-stepCompleteBg: #12b76a;
+  --color-ui-stepper-connector: #e4e7ec;
+  --color-ui-stepper-connectorComplete: #12b76a;
+
+  /* file upload */
+  --color-ui-fileUpload-bg: #f9fafb;
+  --color-ui-fileUpload-border: #d0d5dd;
+  --color-ui-fileUpload-borderActive: #465fff;
+  --color-ui-fileUpload-fg: #344054;
+
+  /* page banner */
+  --color-ui-pageBanner-bg: #ecf3ff;
+  --color-ui-pageBanner-border: #c2d6ff;
+  --color-ui-pageBanner-fg: #252dae;
+
+  /* applied filter */
+  --color-ui-appliedFilter-bg: #ecf3ff;
+  --color-ui-appliedFilter-fg: #252dae;
+  --color-ui-appliedFilter-removeFg: #465fff;
+
+  /* popover/dropdown */
+  --color-ui-popover-bg: #ffffff;
+  --color-ui-popover-border: #e4e7ec;
+  --shadow-ui-popover: 0px 12px 34px -10px rgba(20, 25, 36, 0.10);
+  --color-ui-menu-itemFg: #475467;
+  --color-ui-menu-itemHoverBg: #f2f4f7;
+  --color-ui-menu-itemHoverFg: #344054;
+  --color-ui-menu-separator: #f2f4f7;
+
+  /* toast */
+  --color-ui-toast-bg: #ffffff;
+  --color-ui-toast-border: #e4e7ec;
+  --color-ui-toast-fg: #1d2939;
+  --color-ui-toast-fgMuted: #667085;
+
+  /* timeline */
+  --color-ui-timeline-line: #e4e7ec;
+  --color-ui-timeline-dot: #465fff;
+
+  /* pricing card (descoberto: pricing-tables.html) */
+  --color-ui-pricingCard-bg: #ffffff;
+  --color-ui-pricingCard-border: #e4e7ec;
+  --color-ui-pricingCard-featuredBg: #1d2939;
+  --color-ui-pricingCard-featuredBorder: #1d2939;
+  --color-ui-pricingCard-featuredFg: #ffffff;
+  --color-ui-pricingCard-featuredFgMuted: rgba(255, 255, 255, 0.7);
+  --color-ui-pricingCard-priceStrike: #98a2b3;
+
+  /* notification item (descoberto: header notifications dropdown) */
+  --color-ui-notificationItem-unreadDot: #465fff;
+  --color-ui-notificationItem-hoverBg: #f9fafb;
+
+  /* kanban card (descoberto: task-kanban.html) */
+  --color-ui-kanban-columnBg: #f9fafb;
+  --color-ui-kanban-columnBorder: #e4e7ec;
+
+  /* keyframes for overlays (Radix data-state=open|closed) */
+  --animate-ui-overlay-in: ui-overlay-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-ui-overlay-out: ui-overlay-out 150ms cubic-bezier(0.4, 0, 1, 1);
+  --animate-ui-content-in: ui-content-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-ui-content-out: ui-content-out 150ms cubic-bezier(0.4, 0, 1, 1);
+  --animate-ui-drawer-right-in: ui-drawer-right-in 250ms cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-ui-drawer-right-out: ui-drawer-right-out 200ms cubic-bezier(0.32, 0.72, 0, 1);
+
+  @keyframes ui-overlay-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes ui-overlay-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+  @keyframes ui-content-in {
+    from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+  @keyframes ui-content-out {
+    from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    to { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+  }
+  @keyframes ui-drawer-right-in {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes ui-drawer-right-out {
+    from { transform: translateX(0); }
+    to { transform: translateX(100%); }
+  }
+}
+
+/* ui-template-admin-topbar-to-nextjs — tokens da topbar (light theme).
+ * Extraídos literalmente do template demo.tailadmin.com (header em index.html).
+ * Namespace `adminTopbar-*` para não colidir com tokens existentes. */
+@theme {
+  /* cores */
+  --color-adminTopbar-bg: #ffffff;
+  --color-adminTopbar-border: #e4e7ec;
+  --color-adminTopbar-iconDefault: #667085;
+  --color-adminTopbar-iconHover: #344054;
+  --color-adminTopbar-buttonBorder: #e4e7ec;
+  --color-adminTopbar-buttonHoverBg: #f2f4f7;
+  --color-adminTopbar-buttonActiveBg: #f2f4f7;
+  --color-adminTopbar-dropdownBg: #ffffff;
+  --color-adminTopbar-dropdownBorder: #e4e7ec;
+  --color-adminTopbar-dropdownItemHover: #f2f4f7;
+  --color-adminTopbar-dropdownDivider: #f2f4f7;
+  --color-adminTopbar-badgePing: #fb923c; /* orange-400 */
+  --color-adminTopbar-statusSuccess: #12b76a;
+  --color-adminTopbar-statusError: #f04438;
+  --color-adminTopbar-searchBg: transparent;
+  --color-adminTopbar-searchBorder: #e4e7ec;
+  --color-adminTopbar-searchPlaceholder: #98a2b3;
+  --color-adminTopbar-searchText: #1d2939;
+  --color-adminTopbar-searchKbdBg: #f9fafb;
+  --color-adminTopbar-searchKbdBorder: #e4e7ec;
+  --color-adminTopbar-searchKbdFg: #667085;
+  --color-adminTopbar-userName: #344054;
+  --color-adminTopbar-userEmail: #667085;
+  --color-adminTopbar-menuItemFg: #344054;
+  --color-adminTopbar-menuItemHoverBg: #f2f4f7;
+  --color-adminTopbar-menuItemHoverFg: #1d2939;
+  --color-adminTopbar-notificationActor: #1d2939;
+  --color-adminTopbar-notificationMessage: #667085;
+  --color-adminTopbar-notificationMeta: #667085;
+  --color-adminTopbar-notificationDot: #98a2b3;
+  --color-adminTopbar-footerBtnBg: #ffffff;
+  --color-adminTopbar-footerBtnBorder: #d0d5dd;
+  --color-adminTopbar-footerBtnFg: #344054;
+  --color-adminTopbar-footerBtnHoverBg: #f9fafb;
+
+  /* dimensões */
+  --spacing-adminTopbar-buttonMobile: 40px; /* h-10 w-10 */
+  --spacing-adminTopbar-buttonDesktop: 44px; /* h-11 w-11 */
+  --spacing-adminTopbar-searchHeight: 44px; /* h-11 */
+
+  /* larguras */
+  --width-adminTopbar-search: 430px; /* xl:w-[430px] */
+  --width-adminTopbar-dropdownNotifications: 350px;
+  --width-adminTopbar-dropdownNotificationsSm: 361px;
+  --width-adminTopbar-dropdownUser: 260px;
+  --height-adminTopbar-dropdownNotifications: 480px;
+
+  /* sombras (replicando shadow-theme-lg / shadow-theme-xs do template) */
+  --shadow-adminTopbar: 0px 1px 2px 0px rgba(16, 24, 40, 0.05);
+  --shadow-adminTopbar-dropdown: 0px 12px 34px -10px rgba(20, 25, 36, 0.10);
+  --shadow-adminTopbar-searchKbd: 0px 1px 2px 0px rgba(16, 24, 40, 0.05);
+  --shadow-adminTopbar-mobileActions: 0px 4px 8px -2px rgba(16, 24, 40, 0.10);
+
+  /* transições */
+  --transition-duration-adminTopbar: 200ms;
+
+  /* z-index (replica `z-99999` do template) */
+  --z-adminTopbar: 99999;
+
+  /* keyframes */
+  --animate-adminTopbar-dropdownIn: adminTopbar-dropdown-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-adminTopbar-dropdownOut: adminTopbar-dropdown-out 150ms cubic-bezier(0.4, 0, 1, 1);
+  --animate-adminTopbar-ping: adminTopbar-ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+
+  @keyframes adminTopbar-dropdown-in {
+    from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes adminTopbar-dropdown-out {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  }
+  @keyframes adminTopbar-ping {
+    75%, 100% { transform: scale(2); opacity: 0; }
+  }
+}
+
+/* ui-template-admin-charts-to-nextjs — chart tokens (light theme, single-theme).
+ * Extraídos do template demo.tailadmin.com (ApexCharts v3.54.0 — series usam paleta
+ * de marca + brand variants; eixos/grid/tooltip extraídos das classes apexcharts-*
+ * efetivas no light theme). Namespace `charts-*` para não colidir com `ui-*`,
+ * `adminMenu-*`, `adminShell-*` ou `adminTopbar-*`. */
+@theme {
+  /* Series palette — brand-500, brand-300, success, warning, error, info, purple, cyan
+   * (brand-500 #465fff é a cor dominante; brand-300 #9cb9ff aparece como segunda
+   * série; success/warning/error vêm dos tokens semânticos do template). */
+  --color-charts-series-1: #465fff;
+  --color-charts-series-2: #9cb9ff;
+  --color-charts-series-3: #12b76a;
+  --color-charts-series-4: #f79009;
+  --color-charts-series-5: #f04438;
+  --color-charts-series-6: #7592ff;
+  --color-charts-series-7: #c2d6ff;
+  --color-charts-series-8: #039855;
+
+  /* Semantic */
+  --color-charts-success: #12b76a;
+  --color-charts-danger: #f04438;
+  --color-charts-warning: #f79009;
+  --color-charts-info: #465fff;
+
+  /* Axes / grid / labels — extraídos do SVG inline (fill="#373d3f" tick labels,
+   * stroke "#e4e7ec" gridlines, axisBorder "#e4e7ec"). */
+  --color-charts-grid: #e4e7ec;
+  --color-charts-axis-line: #e4e7ec;
+  --color-charts-axis-label: #344054;
+  --color-charts-tick-label: #6e8192;
+
+  /* Tooltip — apexcharts default tooltip styled by template (white bg, gray border). */
+  --color-charts-tooltip-bg: #ffffff;
+  --color-charts-tooltip-fg: #1d2939;
+  --color-charts-tooltip-border: #e4e7ec;
+
+  /* Legend */
+  --color-charts-legend-fg: #344054;
+
+  --shadow-charts-tooltip: 0px 4px 12px rgba(16, 24, 40, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}

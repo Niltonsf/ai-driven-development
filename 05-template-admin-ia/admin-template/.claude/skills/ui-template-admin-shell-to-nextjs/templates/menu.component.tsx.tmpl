@@ -1,0 +1,25 @@
+{{MENU_USE_CLIENT}}import type { ReactNode } from "react";
+{{MENU_IMPORTS}}{{IF_LOGO_IN_ASIDE}}import { Logo } from "./logo.component";{{END_IF_LOGO_IN_ASIDE}}
+
+export function Menu({ children }: { children?: ReactNode }) {
+  {{MENU_HOOK_CALL}}return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {{IF_LOGO_IN_ASIDE}}<div
+        className="{{LOGO_ASIDE_VISIBILITY_CLASS}}"
+        style={{
+          display: "flex",
+          alignItems: "var(--shell-aside-header-align)",
+          justifyContent: isMini ? "{{ASIDE_HEADER_JUSTIFY_MINI}}" : "{{ASIDE_HEADER_JUSTIFY_EXPANDED}}",
+          gap: "var(--shell-aside-header-gap)",
+          paddingTop: "var(--shell-aside-header-pt)",
+          paddingBottom: "var(--shell-aside-header-pb)",
+          paddingLeft: isMini ? "var(--shell-aside-header-px-mini)" : "var(--shell-aside-header-px-expanded)",
+          paddingRight: isMini ? "var(--shell-aside-header-px-mini)" : "var(--shell-aside-header-px-expanded)",
+        }}
+      >
+        <Logo />
+      </div>{{END_IF_LOGO_IN_ASIDE}}
+      <nav style={{ flex: 1, overflowY: "auto" }}>{children}</nav>
+    </div>
+  );
+}

@@ -1,0 +1,15 @@
+/* DO NOT USE THIS FILE DIRECTLY.
+ *
+ * The single freeform `<Logo>` template was replaced by three pre-baked sub-templates,
+ * one per `kind` (Fase 1.4.1). The Fase 3 generator selects exactly one of:
+ *
+ *   - logo.text-only.component.tsx.tmpl       (kind=text-only)
+ *   - logo.image-single.component.tsx.tmpl    (kind=image-single)
+ *   - logo.image-variants.component.tsx.tmpl  (kind=image-variants)
+ *
+ * Rationale: a single template with a `{{LOGO_BODY}}` placeholder gave the generator
+ * too much freedom and let it silently downgrade image-based logos to text-only.
+ * Fixed sub-templates per kind force fidelity at generation time.
+ *
+ * Final destination remains `src/shared/template/admin/logo.component.tsx`.
+ */

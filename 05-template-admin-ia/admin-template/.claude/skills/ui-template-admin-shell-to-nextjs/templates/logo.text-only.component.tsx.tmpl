@@ -1,0 +1,25 @@
+{{LOGO_USE_CLIENT}}{{LOGO_IMPORTS}}
+type LogoProps = {
+  /* "aside" (default) | "topbar" — preserva a API mesmo quando o kind não usa o placement,
+   * para que `<TopBar>` e `<Menu>` possam renderizar `<Logo placement="..." />` sem branching. */
+  placement?: "aside" | "topbar";
+};
+
+export function Logo({ placement: _placement = "aside" }: LogoProps = {}) {
+  void _placement;
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "0.5rem",
+        fontWeight: 600,
+        color: "var(--shell-text)",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {{LOGO_INLINE_SVG_OR_EMPTY}}
+      <span>{{LOGO_TEXT}}</span>
+    </span>
+  );
+}

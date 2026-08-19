@@ -1,0 +1,215 @@
+{
+  "$note": "Intermediate menu tree extracted by ui-template-admin-sidebar-to-nextjs from sites/demo.tailadmin.com. Consumed by ui-template-admin-pages-to-nextjs to materialize src/modules/examples/admin-menu/menu.config.ts. Icons map to '@/shared/template/admin/icons' exports.",
+  "items": [
+    {
+      "type": "section",
+      "key": "menu",
+      "label": "MENU",
+      "children": [
+        {
+          "type": "group",
+          "key": "Dashboard",
+          "label": "Dashboard",
+          "icon": "GridIcon",
+          "children": [
+            { "type": "item", "key": "ecommerce", "label": "eCommerce", "href": "/dashboard/ecommerce" },
+            { "type": "item", "key": "analytics", "label": "Analytics", "href": "/dashboard/analytics" },
+            { "type": "item", "key": "marketing", "label": "Marketing", "href": "/dashboard/marketing" },
+            { "type": "item", "key": "crm", "label": "CRM", "href": "/dashboard/crm" },
+            { "type": "item", "key": "stocks", "label": "Stocks", "href": "/dashboard/stocks" },
+            { "type": "item", "key": "saas", "label": "SaaS", "href": "/dashboard/saas" },
+            { "type": "item", "key": "logistics", "label": "Logistics", "href": "/dashboard/logistics" },
+            { "type": "item", "key": "ai", "label": "AI", "href": "/dashboard/ai", "badge": { "label": "New" } },
+            { "type": "item", "key": "sales", "label": "Sales", "href": "/dashboard/sales", "badge": { "label": "New" } },
+            { "type": "item", "key": "finance", "label": "Finance", "href": "/dashboard/finance", "badge": { "label": "New" } }
+          ]
+        },
+        {
+          "type": "group",
+          "key": "AI",
+          "label": "AI Assistant",
+          "icon": "AiAssistantIcon",
+          "badge": { "label": "New" },
+          "children": [
+            { "type": "item", "key": "textGenerator", "label": "Text Generator", "href": "/ai/text-generator" },
+            { "type": "item", "key": "imageGenerator", "label": "Image Generator", "href": "/ai/image-generator" },
+            { "type": "item", "key": "codeGenerator", "label": "Code Generator", "href": "/ai/code-generator" },
+            { "type": "item", "key": "videoGenerator", "label": "Video Generator", "href": "/ai/video-generator" }
+          ]
+        },
+        {
+          "type": "group",
+          "key": "E-commerce",
+          "label": "E-commerce",
+          "icon": "CartIcon",
+          "children": [
+            { "type": "item", "key": "products", "label": "Products", "href": "/ecommerce/products" },
+            { "type": "item", "key": "addProduct", "label": "Add Product", "href": "/ecommerce/add-product" },
+            { "type": "item", "key": "billing", "label": "Billing", "href": "/ecommerce/billing" },
+            { "type": "item", "key": "invoices", "label": "Invoices", "href": "/ecommerce/invoices" },
+            { "type": "item", "key": "singleInvoice", "label": "Single Invoice", "href": "/ecommerce/single-invoice" },
+            { "type": "item", "key": "createInvoice", "label": "Create Invoice", "href": "/ecommerce/create-invoice" },
+            { "type": "item", "key": "transactions", "label": "Transactions", "href": "/ecommerce/transactions" },
+            { "type": "item", "key": "singleTransaction", "label": "Single Transaction", "href": "/ecommerce/single-transaction" }
+          ]
+        },
+        { "type": "item", "key": "Calendar", "label": "Calendar", "href": "/calendar", "icon": "CalendarIcon" },
+        { "type": "item", "key": "Profile", "label": "User Profile", "href": "/profile", "icon": "UserCircleIcon" },
+        {
+          "type": "group",
+          "key": "Task",
+          "label": "Task",
+          "icon": "TaskIcon",
+          "children": [
+            { "type": "item", "key": "taskList", "label": "List", "href": "/task/list" },
+            { "type": "item", "key": "taskKanban", "label": "Kanban", "href": "/task/kanban" }
+          ]
+        },
+        {
+          "type": "group",
+          "key": "Forms",
+          "label": "Forms",
+          "icon": "FormsIcon",
+          "children": [
+            { "type": "item", "key": "formElements", "label": "Form Elements", "href": "/forms/elements" },
+            { "type": "item", "key": "formLayout", "label": "Form Layout", "href": "/forms/layout" }
+          ]
+        },
+        {
+          "type": "group",
+          "key": "Tables",
+          "label": "Tables",
+          "icon": "TablesIcon",
+          "children": [
+            { "type": "item", "key": "basicTables", "label": "Basic Tables", "href": "/tables/basic" },
+            { "type": "item", "key": "dataTables", "label": "Data Tables", "href": "/tables/data" }
+          ]
+        },
+        {
+          "type": "group",
+          "key": "Pages",
+          "label": "Pages",
+          "icon": "PagesIcon",
+          "children": [
+            { "type": "item", "key": "fileManager", "label": "File Manager", "href": "/pages/file-manager" },
+            { "type": "item", "key": "pricingTables", "label": "Pricing Tables", "href": "/pages/pricing-tables" },
+            { "type": "item", "key": "faq", "label": "FAQ", "href": "/pages/faq" },
+            { "type": "item", "key": "api", "label": "API Keys", "href": "/pages/api-keys", "badge": { "label": "New" } },
+            { "type": "item", "key": "integrations", "label": "Integrations", "href": "/pages/integrations", "badge": { "label": "New" } },
+            { "type": "item", "key": "blank", "label": "Blank Page", "href": "/pages/blank" },
+            { "type": "item", "key": "page404", "label": "404 Error", "href": "/pages/404" },
+            { "type": "item", "key": "page500", "label": "500 Error", "href": "/pages/500" },
+            { "type": "item", "key": "page503", "label": "503 Error", "href": "/pages/503" },
+            { "type": "item", "key": "comingSoon", "label": "Coming Soon", "href": "/pages/coming-soon" },
+            { "type": "item", "key": "termsCondition", "label": "Maintenance", "href": "/pages/maintenance" },
+            { "type": "item", "key": "success", "label": "Success", "href": "/pages/success" }
+          ]
+        },
+        {
+          "type": "group",
+          "key": "Layouts",
+          "label": "Layouts",
+          "icon": "LayoutsIcon",
+          "badge": { "label": "New" },
+          "children": [
+            { "type": "item", "key": "layoutOne", "label": "Layout One", "href": "/layouts/one" },
+            { "type": "item", "key": "layoutTwo", "label": "Layout Two", "href": "/layouts/two" },
+            { "type": "item", "key": "layoutThree", "label": "Layout Three", "href": "/layouts/three" },
+            { "type": "item", "key": "layoutFour", "label": "Layout Four", "href": "/layouts/four" },
+            { "type": "item", "key": "layoutFive", "label": "Layout Five", "href": "/layouts/five" },
+            { "type": "item", "key": "layoutSix", "label": "Layout Six", "href": "/layouts/six" }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "key": "support",
+      "label": "Support",
+      "children": [
+        { "type": "item", "key": "Chat", "label": "Chat", "href": "/chat", "icon": "ChatIcon" },
+        {
+          "type": "group",
+          "key": "Support",
+          "label": "Support Ticket",
+          "icon": "SupportIcon",
+          "badge": { "label": "New" },
+          "children": [
+            { "type": "item", "key": "ticketLists", "label": "Ticket List", "href": "/support/list" },
+            { "type": "item", "key": "ticketReply", "label": "Ticket Reply", "href": "/support/reply" }
+          ]
+        },
+        {
+          "type": "group",
+          "key": "Email",
+          "label": "Email",
+          "icon": "EmailIcon",
+          "children": [
+            { "type": "item", "key": "inbox", "label": "Inbox", "href": "/email/inbox" },
+            { "type": "item", "key": "inboxDetails", "label": "Details", "href": "/email/details" }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "key": "others",
+      "label": "others",
+      "children": [
+        {
+          "type": "group",
+          "key": "Charts",
+          "label": "Charts",
+          "icon": "ChartsIcon",
+          "children": [
+            { "type": "item", "key": "lineChart", "label": "Line Chart", "href": "/charts/line" },
+            { "type": "item", "key": "barChart", "label": "Bar Chart", "href": "/charts/bar" },
+            { "type": "item", "key": "pieChart", "label": "Pie Chart", "href": "/charts/pie" }
+          ]
+        },
+        {
+          "type": "group",
+          "key": "UiElements",
+          "label": "UI Elements",
+          "icon": "UiElementsIcon",
+          "children": [
+            { "type": "item", "key": "alerts", "label": "Alerts", "href": "/ui/alerts" },
+            { "type": "item", "key": "avatars", "label": "Avatars", "href": "/ui/avatars" },
+            { "type": "item", "key": "badge", "label": "Badge", "href": "/ui/badge" },
+            { "type": "item", "key": "breadcrumb", "label": "Breadcrumb", "href": "/ui/breadcrumb" },
+            { "type": "item", "key": "buttons", "label": "Buttons", "href": "/ui/buttons" },
+            { "type": "item", "key": "buttonsGroup", "label": "Buttons Group", "href": "/ui/buttons-group" },
+            { "type": "item", "key": "cards", "label": "Cards", "href": "/ui/cards" },
+            { "type": "item", "key": "carousel", "label": "Carousel", "href": "/ui/carousel" },
+            { "type": "item", "key": "dropdowns", "label": "Dropdowns", "href": "/ui/dropdowns" },
+            { "type": "item", "key": "images", "label": "Images", "href": "/ui/images" },
+            { "type": "item", "key": "links", "label": "Links", "href": "/ui/links" },
+            { "type": "item", "key": "list", "label": "List", "href": "/ui/list" },
+            { "type": "item", "key": "modals", "label": "Modals", "href": "/ui/modals" },
+            { "type": "item", "key": "notifications", "label": "Notifications", "href": "/ui/notifications" },
+            { "type": "item", "key": "pagination", "label": "Pagination", "href": "/ui/pagination" },
+            { "type": "item", "key": "popovers", "label": "Popovers", "href": "/ui/popovers" },
+            { "type": "item", "key": "progress", "label": "Progress Bars", "href": "/ui/progress" },
+            { "type": "item", "key": "ribbons", "label": "Ribbons", "href": "/ui/ribbons" },
+            { "type": "item", "key": "spinners", "label": "Spinners", "href": "/ui/spinners" },
+            { "type": "item", "key": "tabs", "label": "Tabs", "href": "/ui/tabs" },
+            { "type": "item", "key": "tooltips", "label": "Tooltips", "href": "/ui/tooltips" },
+            { "type": "item", "key": "videos", "label": "Videos", "href": "/ui/videos" }
+          ]
+        },
+        {
+          "type": "group",
+          "key": "Authentication",
+          "label": "Authentication",
+          "icon": "AuthIcon",
+          "children": [
+            { "type": "item", "key": "signin", "label": "Sign In", "href": "/auth/sign-in" },
+            { "type": "item", "key": "signup", "label": "Sign Up", "href": "/auth/sign-up" },
+            { "type": "item", "key": "resetPassword", "label": "Reset Password", "href": "/auth/reset-password" },
+            { "type": "item", "key": "twoStepVerification", "label": "Two Step Verification", "href": "/auth/two-step-verification" }
+          ]
+        }
+      ]
+    }
+  ]
+}
