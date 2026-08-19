@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node .claude/skills/config-project-fullstack/scripts/create-project.js --namespace @sdd)",
+      "Bash(node .claude/skills/config-new-module/scripts/create-module.js --module auth --namespace @sdd)",
+      "Bash(node .claude/skills/config-prisma/scripts/init-prisma-backend.js --apply --install)",
+      "Bash(node .claude/skills/config-package-shared/scripts/rebuild-shared.js)",
+      "Bash(npm --workspace apps/backend run prisma:generate)",
+      "Bash(node .claude/skills/config-prisma/scripts/init-prisma-backend.js --dry-run)",
+      "Bash(find /Users/leonardomleitao/Desktop/ai-driven-development/sdd/.claude/skills -type f \\\\\\( -name \"*.md\" -o -name \"*.js\" \\\\\\) -exec grep -l \"\\\\.agents/skills\" {} \\\\;)",
+      "Bash(git -C /Users/leonardomleitao/Desktop/ai-driven-development/sdd rev-parse --show-toplevel)",
+      "Bash(npx tsc *)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(npm run *)",
+      "Bash(npx jest *)",
+      "Bash(xargs cat *)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(node ./.claude/skills/config-new-module/scripts/create-module.js --module catalog --namespace @sdd)"
+    ]
+  }
+}
