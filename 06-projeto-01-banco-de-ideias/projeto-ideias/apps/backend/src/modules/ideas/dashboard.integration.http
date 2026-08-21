@@ -1,0 +1,196 @@
+### Variaveis
+@host = http://localhost:4000
+@token = COLE_O_JWT_DO_OWNER_AQUI
+@tokenOther = COLE_O_JWT_DO_OUTRO_USUARIO_AQUI
+@ideaTypeId = COLE_O_ID_DO_TIPO_DE_IDEIA_DO_OWNER
+@ideaId = COLE_UM_ID_DE_IDEIA_DO_OWNER_PARA_O_PROCESSAMENTO
+@ideaTypeIdOther = COLE_O_ID_DO_TIPO_DO_OUTRO
+
+### Registrar owner (espera 201)
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Dashboard Owner",
+  "email": "owner.dashboard@example.com",
+  "password": "Strong@123"
+}
+
+### Login do owner (espera 200 com token -> @token)
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "owner.dashboard@example.com",
+  "password": "Strong@123"
+}
+
+### Registrar outro usuario (espera 201)
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Dashboard Other",
+  "email": "other.dashboard@example.com",
+  "password": "Strong@123"
+}
+
+### Login do outro usuario (espera 200 com token -> @tokenOther)
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "other.dashboard@example.com",
+  "password": "Strong@123"
+}
+
+###############################################################################
+# Pre-condicao do owner: 2 Tipos, 3 Ideias (criadas em ordem -> updatedAt
+# espacado pela ordem de criacao) e 1 Processamento.
+###############################################################################
+
+### Tipo 1 do owner (espera 201 -> @ideaTypeId via GET /idea-types)
+POST {{host}}/idea-types
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Produto Digital",
+  "description": "Tipo voltado para produtos digitais SaaS.",
+  "prompt": "Avalie {{name}}, {{description}}, {{objective}}."
+}
+
+### Tipo 2 do owner (espera 201)
+POST {{host}}/idea-types
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Servico",
+  "description": "Tipo voltado para servicos.",
+  "prompt": "Avalie {{name}}, {{description}}, {{objective}}."
+}
+
+### Listar Tipos do owner para pegar o @ideaTypeId (espera 200; total=2)
+GET {{host}}/idea-types?page=1&pageSize=10
+Authorization: Bearer {{token}}
+
+### Ideia 1 do owner (a mais antiga) (espera 201)
+POST {{host}}/ideas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Ideia A (mais antiga)",
+  "description": "Primeira ideia do owner para o dashboard.",
+  "objective": "Validar contagem e ordenacao no dashboard.",
+  "ideaTypeId": "{{ideaTypeId}}"
+}
+
+### Ideia 2 do owner (intermediaria) (espera 201)
+POST {{host}}/ideas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Ideia B (intermediaria)",
+  "description": "Segunda ideia do owner para o dashboard.",
+  "objective": "Validar contagem e ordenacao no dashboard.",
+  "ideaTypeId": "{{ideaTypeId}}"
+}
+
+### Ideia 3 do owner (a mais recente) (espera 201)
+POST {{host}}/ideas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Ideia C (mais recente)",
+  "description": "Terceira ideia do owner para o dashboard.",
+  "objective": "Validar contagem e ordenacao no dashboard.",
+  "ideaTypeId": "{{ideaTypeId}}"
+}
+
+### Listar Ideias do owner para pegar um @ideaId (espera 200; total=3)
+GET {{host}}/ideas?page=1&pageSize=10
+Authorization: Bearer {{token}}
+
+### Criar 1 Processamento do owner a partir de uma Ideia (espera 201)
+# ANOTAR NA EVIDENCIA: tempo da chamada (gera via IA).
+POST {{host}}/processings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "ideaId": "{{ideaId}}"
+}
+
+###############################################################################
+# Pre-condicao do outro usuario: 1 Tipo e 1 Ideia, 0 Processamentos.
+###############################################################################
+
+### Tipo do outro (espera 201 -> @ideaTypeIdOther via GET com tokenOther)
+POST {{host}}/idea-types
+Authorization: Bearer {{tokenOther}}
+Content-Type: application/json
+
+{
+  "name": "Tipo do Outro",
+  "description": "Tipo de ideia pertencente ao outro usuario.",
+  "prompt": "Avalie {{name}}, {{description}}, {{objective}}."
+}
+
+### Listar Tipos do outro para pegar @ideaTypeIdOther (espera 200; total=1)
+GET {{host}}/idea-types?page=1&pageSize=10
+Authorization: Bearer {{tokenOther}}
+
+### Ideia do outro (espera 201)
+POST {{host}}/ideas
+Authorization: Bearer {{tokenOther}}
+Content-Type: application/json
+
+{
+  "name": "Ideia do Outro",
+  "description": "Ideia pertencente ao outro usuario para teste cross-user.",
+  "objective": "Validar o isolamento por usuario no dashboard.",
+  "ideaTypeId": "{{ideaTypeIdOther}}"
+}
+
+###############################################################################
+# Dashboard (spec 012)
+###############################################################################
+
+### GET /dashboard/summary (owner) (espera 200)
+# Esperado: stats { ideasCount: 3, ideaTypesCount: 2, processingsCount: 1 };
+# latestIdeas com 3 itens ordenados por updatedAt desc
+# ("Ideia C" primeiro, "Ideia A" por ultimo);
+# activity com EXATAMENTE 7 itens, date em ordem ascendente.
+GET {{host}}/dashboard/summary
+Authorization: Bearer {{token}}
+
+### GET /dashboard/summary (other) (espera 200)
+# Esperado: stats { ideasCount: 1, ideaTypesCount: 1, processingsCount: 0 };
+# activity com 7 itens. Confirma isolamento por userId
+# (atividade/itens do owner NAO vazam para o other).
+GET {{host}}/dashboard/summary
+Authorization: Bearer {{tokenOther}}
+
+### GET /dashboard/summary?latestLimit=1 (owner) (espera 200)
+# Esperado: latestIdeas.length === 1; activity continua com 7 itens.
+GET {{host}}/dashboard/summary?latestLimit=1
+Authorization: Bearer {{token}}
+
+### GET /dashboard/summary?latestLimit=20 (owner) (espera 200)
+GET {{host}}/dashboard/summary?latestLimit=20
+Authorization: Bearer {{token}}
+
+### GET /dashboard/summary?latestLimit=0 (espera 422 dashboard.latestLimit.invalid)
+GET {{host}}/dashboard/summary?latestLimit=0
+Authorization: Bearer {{token}}
+
+### GET /dashboard/summary?latestLimit=21 (espera 422 dashboard.latestLimit.invalid)
+GET {{host}}/dashboard/summary?latestLimit=21
+Authorization: Bearer {{token}}
+
+### GET /dashboard/summary sem Authorization (espera 401)
+GET {{host}}/dashboard/summary

@@ -1,0 +1,151 @@
+### Variaveis
+@host = http://localhost:4000
+@token = COLE_O_JWT_DO_USUARIO_AQUI
+
+### Registrar usuario para gerar token (espera 201)
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Ai User",
+  "email": "ai.user@example.com",
+  "password": "Strong@123"
+}
+
+### Login para obter o token (espera 200 com token) — copie o token para @token
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "ai.user@example.com",
+  "password": "Strong@123"
+}
+
+### Gerar texto com prompt curto (espera 200 { text } nao vazio)
+POST {{host}}/ai/generate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "prompt": "Você ajuda a descrever um Tipo de Ideia em uma frase curta, clara e em português."
+}
+
+### Gerar texto com prompt + context + instruction (espera 200; registrar trecho da resposta)
+POST {{host}}/ai/generate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "prompt": "Você ajuda a escrever a descrição de uma Ideia em português, de forma clara e objetiva.",
+  "context": "Nome: App de Receitas\nTipo de Ideia: Produto Digital",
+  "instruction": "Foque no público iniciante na cozinha."
+}
+
+### Gerar sem prompt (espera 422 ["ai.prompt.invalid"])
+POST {{host}}/ai/generate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "context": "Sem prompt aqui."
+}
+
+### Gerar com prompt vazio (espera 422 ["ai.prompt.invalid"])
+POST {{host}}/ai/generate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "prompt": "   "
+}
+
+### Gerar com prompt de 8001 caracteres (espera 422 ["ai.prompt.invalid"])
+# IMPORTANTE: substitua o valor de "prompt" por uma string com 8001 caracteres
+# (o Rest Client nao gera strings longas automaticamente). Ex.: cole 8001 letras "a".
+POST {{host}}/ai/generate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "prompt": "COLE_AQUI_UMA_STRING_COM_8001_CARACTERES"
+}
+
+### Gerar com context de 16001 caracteres (espera 422 ["ai.input.too_long"])
+# IMPORTANTE: substitua o valor de "context" por uma string com 16001 caracteres.
+POST {{host}}/ai/generate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "prompt": "Prompt valido para o teste de context muito longo.",
+  "context": "COLE_AQUI_UMA_STRING_COM_16001_CARACTERES"
+}
+
+### Gerar com instruction de 2001 caracteres (espera 422 ["ai.input.too_long"])
+# IMPORTANTE: substitua o valor de "instruction" por uma string com 2001 caracteres.
+POST {{host}}/ai/generate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "prompt": "Prompt valido para o teste de instruction muito longa.",
+  "instruction": "COLE_AQUI_UMA_STRING_COM_2001_CARACTERES"
+}
+
+### Gerar sem token (espera 401)
+POST {{host}}/ai/generate
+Content-Type: application/json
+
+{
+  "prompt": "Prompt valido porem sem autenticacao."
+}
+
+### ---------------------------------------------------------------------------
+### Transcricao de voz (POST /ai/transcribe)
+### ---------------------------------------------------------------------------
+### Pre-requisito: tenha um arquivo de audio curto em ./fixtures/sample.webm
+### (ou .mp3/.m4a/.wav). Ajuste o caminho e o Content-Type abaixo conforme o
+### formato real. O Rest Client envia o arquivo referenciado com "< caminho".
+
+### Transcrever audio valido (espera 200 { text } nao vazio)
+# Anote o tempo da chamada e um trecho do texto retornado.
+POST {{host}}/ai/transcribe
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryAiVoice
+
+------WebKitFormBoundaryAiVoice
+Content-Disposition: form-data; name="file"; filename="sample.webm"
+Content-Type: audio/webm
+
+< ./fixtures/sample.webm
+------WebKitFormBoundaryAiVoice--
+
+### Transcrever sem arquivo (espera 422 ["ai.audio.required"])
+POST {{host}}/ai/transcribe
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryAiVoice
+
+------WebKitFormBoundaryAiVoice--
+
+### Transcrever arquivo de tipo invalido (espera 422 ["ai.audio.invalid_type"])
+POST {{host}}/ai/transcribe
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryAiVoice
+
+------WebKitFormBoundaryAiVoice
+Content-Disposition: form-data; name="file"; filename="nota.txt"
+Content-Type: text/plain
+
+Isto e um texto puro, nao um audio.
+------WebKitFormBoundaryAiVoice--
+
+### Transcrever sem token (espera 401)
+POST {{host}}/ai/transcribe
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryAiVoice
+
+------WebKitFormBoundaryAiVoice
+Content-Disposition: form-data; name="file"; filename="sample.webm"
+Content-Type: audio/webm
+
+< ./fixtures/sample.webm
+------WebKitFormBoundaryAiVoice--

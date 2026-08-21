@@ -1,0 +1,210 @@
+### Variaveis
+@host = http://localhost:4000
+@token = COLE_O_JWT_DO_OWNER_AQUI
+@tokenOther = COLE_O_JWT_DO_OUTRO_USUARIO_AQUI
+@ideaTypeId = COLE_O_ID_DO_TIPO_DE_IDEIA_DO_OWNER
+@ideaId = COLE_O_ID_DA_IDEIA_DO_OWNER
+@ideaIdOther = COLE_O_ID_DA_IDEIA_DO_OUTRO_USUARIO
+@processingId = COLE_O_ID_RETORNADO_NO_POST_PROCESSINGS
+
+### Registrar owner (espera 201)
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Processing Owner",
+  "email": "owner.processing@example.com",
+  "password": "Strong@123"
+}
+
+### Login do owner (espera 200 com token -> @token)
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "owner.processing@example.com",
+  "password": "Strong@123"
+}
+
+### Registrar outro usuario (espera 201)
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Processing Other",
+  "email": "other.processing@example.com",
+  "password": "Strong@123"
+}
+
+### Login do outro usuario (espera 200 com token -> @tokenOther)
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "other.processing@example.com",
+  "password": "Strong@123"
+}
+
+### Pre-condicao: criar Tipo de Ideia do owner (espera 201 -> @ideaTypeId)
+POST {{host}}/idea-types
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Produto Digital",
+  "description": "Tipo voltado para produtos digitais SaaS.",
+  "prompt": "Voce e um consultor de produto. Avalie a ideia {{name}} cuja descricao e {{description}} e o objetivo e {{objective}}. Considere os recursos de contexto a seguir:\n{{resources}}"
+}
+
+### Listar Tipos do owner para pegar o ideaTypeId (espera 200)
+GET {{host}}/idea-types?page=1&pageSize=10
+Authorization: Bearer {{token}}
+
+### Pre-condicao: criar Ideia do owner com 2 recursos (espera 201 -> @ideaId via GET /ideas)
+POST {{host}}/ideas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "App de Receitas",
+  "description": "Aplicativo para organizar e descobrir receitas culinarias.",
+  "objective": "Ajudar pessoas a cozinhar melhor em casa no dia a dia.",
+  "ideaTypeId": "{{ideaTypeId}}",
+  "resources": [
+    { "type": "text", "content": "Pesquisa: 70% cozinham em casa 4x/semana.", "position": 0 },
+    { "type": "text", "content": "Concorrente principal: app X com 1M usuarios.", "position": 1 }
+  ]
+}
+
+### Listar Ideias do owner para pegar o ideaId (espera 200)
+GET {{host}}/ideas?page=1&pageSize=10
+Authorization: Bearer {{token}}
+
+### Pre-condicao: Tipo + Ideia do outro usuario (espera 201)
+POST {{host}}/idea-types
+Authorization: Bearer {{tokenOther}}
+Content-Type: application/json
+
+{
+  "name": "Tipo do Outro",
+  "description": "Tipo de ideia pertencente ao outro usuario.",
+  "prompt": "Avalie {{name}} e {{description}}."
+}
+
+### Criar Ideia do outro usuario (espera 201 -> @ideaIdOther via GET /ideas com tokenOther)
+POST {{host}}/ideas
+Authorization: Bearer {{tokenOther}}
+Content-Type: application/json
+
+{
+  "name": "Ideia do Outro",
+  "description": "Ideia pertencente ao outro usuario para teste cross-user.",
+  "objective": "Validar o isolamento por usuario no Processamento.",
+  "ideaTypeId": "COLE_O_ID_DO_TIPO_DO_OUTRO"
+}
+
+### Listar Ideias do outro usuario (espera 200 -> @ideaIdOther)
+GET {{host}}/ideas?page=1&pageSize=10
+Authorization: Bearer {{tokenOther}}
+
+###############################################################################
+# Processamentos (spec 011)
+###############################################################################
+
+### POST /processings valido (espera 201; 1 iteracao, result nao vazio)
+# ANOTAR NA EVIDENCIA: tempo da chamada e um trecho do result.
+POST {{host}}/processings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "ideaId": "{{ideaId}}"
+}
+
+### POST /processings com ideaId inexistente (espera 422 processing.idea.invalid)
+POST {{host}}/processings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "ideaId": "00000000-0000-4000-8000-000000000000"
+}
+
+### POST /processings com ideaId de outro usuario (espera 422 processing.idea.invalid)
+POST {{host}}/processings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "ideaId": "{{ideaIdOther}}"
+}
+
+### POST /processings/:id/iterations valido (espera 201; nova iteracao)
+# ANOTAR NA EVIDENCIA: tempo da chamada.
+POST {{host}}/processings/{{processingId}}/iterations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "refinement": "Foque mais no diferencial competitivo e seja mais conciso."
+}
+
+### POST /processings/:id/iterations com refinement vazio (espera 422 processing.refinement.required)
+POST {{host}}/processings/{{processingId}}/iterations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "refinement": ""
+}
+
+### POST /processings/:id/iterations com refinement de 2001 caracteres (espera 422 processing.refinement.max.length)
+# Cole no campo refinement uma string com 2001 caracteres.
+POST {{host}}/processings/{{processingId}}/iterations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "refinement": "AAAAAAAAAA... (2001 caracteres)"
+}
+
+### GET /processings/:id do owner (espera 200; iteracoes ordenadas por position)
+GET {{host}}/processings/{{processingId}}
+Authorization: Bearer {{token}}
+
+### GET /processings/:id de outro usuario (espera 404 processing.not_found)
+GET {{host}}/processings/{{processingId}}
+Authorization: Bearer {{tokenOther}}
+
+### GET /processings paginado (espera 200; items enxutos, sem iterations)
+GET {{host}}/processings?page=1&pageSize=10
+Authorization: Bearer {{token}}
+
+### GET /processings/idea-search com termo (espera 200; lista filtrada)
+GET {{host}}/processings/idea-search?term=Receitas
+Authorization: Bearer {{token}}
+
+### GET /processings/idea-search sem termo (espera 200; 20 mais recentes)
+GET {{host}}/processings/idea-search?term=
+Authorization: Bearer {{token}}
+
+### DELETE /processings/:id de outro usuario (espera 404 processing.not_found)
+DELETE {{host}}/processings/{{processingId}}
+Authorization: Bearer {{tokenOther}}
+
+### DELETE /processings/:id do owner (espera 204)
+DELETE {{host}}/processings/{{processingId}}
+Authorization: Bearer {{token}}
+
+### GET /processings/:id apos o delete (espera 404 processing.not_found)
+GET {{host}}/processings/{{processingId}}
+Authorization: Bearer {{token}}
+
+###############################################################################
+# FK Restrict: nao apagar Ideia que possui Processamentos
+###############################################################################
+
+### Recrie um Processamento (POST /processings) e tente apagar a Ideia base
+### DELETE /ideas/:id com Processamento vinculado (espera erro de FK Restrict)
+DELETE {{host}}/ideas/{{ideaId}}
+Authorization: Bearer {{token}}

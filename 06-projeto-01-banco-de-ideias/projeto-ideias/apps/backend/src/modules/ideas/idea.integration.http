@@ -1,0 +1,325 @@
+### Variaveis
+@host = http://localhost:4000
+@token = COLE_O_JWT_DO_USUARIO_AQUI
+@tokenOther = COLE_O_JWT_DE_OUTRO_USUARIO_AQUI
+@ideaTypeId = COLE_O_ID_DE_UM_TIPO_DE_IDEIA_DO_USUARIO
+@ideaTypeIdOther = COLE_O_ID_DE_UM_TIPO_DE_IDEIA_DO_OUTRO_USUARIO
+@ideaId = COLE_O_ID_RETORNADO_NA_LISTAGEM_OU_NO_BANCO
+
+### Registrar usuario dono para gerar token (espera 201)
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Idea Owner",
+  "email": "owner.idea@example.com",
+  "password": "Strong@123"
+}
+
+### Login do dono (espera 200 com token)
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "owner.idea@example.com",
+  "password": "Strong@123"
+}
+
+### Registrar outro usuario (espera 201)
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Other User",
+  "email": "other.idea@example.com",
+  "password": "Strong@123"
+}
+
+### Login do outro usuario (espera 200 com token)
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "other.idea@example.com",
+  "password": "Strong@123"
+}
+
+### Pre-requisito: criar um Tipo de Ideia para o dono (espera 201) e usar o id retornado na listagem em @ideaTypeId
+POST {{host}}/idea-types
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Produto Digital",
+  "description": "Tipo voltado para produtos digitais SaaS.",
+  "prompt": "Avalie {{name}}, {{description}}, {{objective}}."
+}
+
+### Listar Tipos de Ideia do dono para descobrir o ideaTypeId (espera 200)
+GET {{host}}/idea-types?page=1&pageSize=10
+Authorization: Bearer {{token}}
+
+### Criar Ideia valida (espera 201)
+POST {{host}}/ideas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "App de Receitas",
+  "description": "Aplicativo para organizar e descobrir receitas culinarias.",
+  "objective": "Ajudar pessoas a cozinhar melhor em casa no dia a dia.",
+  "ideaTypeId": "{{ideaTypeId}}"
+}
+
+### Criar Ideia com ideaTypeId inexistente (espera 422 idea.ideaType.invalid)
+POST {{host}}/ideas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "App Sem Tipo",
+  "description": "Descricao valida porem o tipo nao existe no banco.",
+  "objective": "Objetivo valido para o teste de tipo inexistente.",
+  "ideaTypeId": "00000000-0000-4000-8000-000000000000"
+}
+
+### Criar Ideia com campos faltando (espera 422 idea.name.required, idea.description.required, idea.objective.required, idea.ideaTypeId.required)
+POST {{host}}/ideas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "",
+  "description": "",
+  "objective": "",
+  "ideaTypeId": ""
+}
+
+### Criar Ideia usando Tipo de Ideia de outro usuario (espera 422 idea.ideaType.invalid)
+POST {{host}}/ideas
+Authorization: Bearer {{tokenOther}}
+Content-Type: application/json
+
+{
+  "name": "Tipo do Outro",
+  "description": "Tentativa de usar tipo de ideia pertencente ao dono.",
+  "objective": "Objetivo valido para o teste de propriedade do tipo.",
+  "ideaTypeId": "{{ideaTypeId}}"
+}
+
+### Listar Ideias paginado (espera 200 com items + total; updatedAt em ISO 8601)
+GET {{host}}/ideas?page=1&pageSize=10
+Authorization: Bearer {{token}}
+
+### Buscar Ideia por id valido (espera 200)
+GET {{host}}/ideas/{{ideaId}}
+Authorization: Bearer {{token}}
+
+### Buscar Ideia por id de outro usuario (espera 404 idea.not_found)
+GET {{host}}/ideas/{{ideaId}}
+Authorization: Bearer {{tokenOther}}
+
+### Atualizar Ideia valida (espera 204)
+PUT {{host}}/ideas/{{ideaId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "App de Receitas v2",
+  "description": "Descricao atualizada do aplicativo de receitas.",
+  "objective": "Objetivo atualizado para o teste de atualizacao.",
+  "ideaTypeId": "{{ideaTypeId}}"
+}
+
+### Pre-requisito do cenario 403: criar um Tipo de Ideia para o OUTRO usuario (espera 201) e usar o id em @ideaTypeIdOther
+POST {{host}}/idea-types
+Authorization: Bearer {{tokenOther}}
+Content-Type: application/json
+
+{
+  "name": "Tipo do Outro",
+  "description": "Tipo de ideia pertencente ao outro usuario.",
+  "prompt": "Avalie {{name}} e {{description}}."
+}
+
+### Atualizar Ideia de outro usuario (espera 403 idea.forbidden)
+# IMPORTANTE: o atacante precisa enviar um ideaTypeId que ele mesmo possui
+# (@ideaTypeIdOther). A checagem de posse do Tipo de Ideia ocorre antes da
+# checagem de posse da Ideia no fluxo de save-idea; usar o tipo do dono aqui
+# produziria 422 idea.ideaType.invalid em vez de 403.
+PUT {{host}}/ideas/{{ideaId}}
+Authorization: Bearer {{tokenOther}}
+Content-Type: application/json
+
+{
+  "name": "Invasor",
+  "description": "Tentativa de atualizar Ideia pertencente a outro usuario.",
+  "objective": "Objetivo valido usado apenas para a checagem de posse.",
+  "ideaTypeId": "{{ideaTypeIdOther}}"
+}
+
+### Deletar Ideia inexistente (espera 404 idea.not_found)
+DELETE {{host}}/ideas/00000000-0000-4000-8000-000000000000
+Authorization: Bearer {{token}}
+
+### Deletar Ideia de outro usuario (espera 403 idea.forbidden)
+DELETE {{host}}/ideas/{{ideaId}}
+Authorization: Bearer {{tokenOther}}
+
+### Deletar Ideia valida (espera 204)
+DELETE {{host}}/ideas/{{ideaId}}
+Authorization: Bearer {{token}}
+
+###############################################################################
+# Recursos da Ideia (spec 009) — relacionamento mestre-detalhe
+###############################################################################
+
+### Criar Ideia com 0 recursos (espera 201; resources tratado como [])
+POST {{host}}/ideas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Ideia sem recursos",
+  "description": "Ideia valida que nao carrega nenhum recurso de contexto.",
+  "objective": "Validar que resources ausente equivale a lista vazia.",
+  "ideaTypeId": "{{ideaTypeId}}",
+  "resources": []
+}
+
+### Criar Ideia com 1 recurso (espera 201)
+POST {{host}}/ideas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Ideia com 1 recurso",
+  "description": "Ideia valida com um unico recurso de texto.",
+  "objective": "Validar a persistencia de um recurso de contexto.",
+  "ideaTypeId": "{{ideaTypeId}}",
+  "resources": [
+    { "type": "text", "content": "Pesquisa de mercado resumida.", "position": 0 }
+  ]
+}
+
+### Criar Ideia com 3 recursos (espera 201; ordenados por position no GET /:id)
+POST {{host}}/ideas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Ideia com 3 recursos",
+  "description": "Ideia valida com tres recursos de texto contextuais.",
+  "objective": "Validar ordenacao por position na leitura do detalhe.",
+  "ideaTypeId": "{{ideaTypeId}}",
+  "resources": [
+    { "type": "text", "content": "Contexto A.", "position": 0 },
+    { "type": "text", "content": "Contexto B.", "position": 1 },
+    { "type": "text", "content": "Contexto C.", "position": 2 }
+  ]
+}
+
+### GET /ideas/:id retorna a colecao de recursos ordenada por position (espera 200)
+GET {{host}}/ideas/{{ideaId}}
+Authorization: Bearer {{token}}
+
+### Atualizar Ideia: replace-all (modifica 1, adiciona 1, remove 1) (espera 204)
+# Reaproveite no PUT um id de recurso retornado pelo GET /:id anterior para
+# exercitar o caminho de "update" (mantido) versus "create" (novo sem id).
+PUT {{host}}/ideas/{{ideaId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Ideia com recursos atualizados",
+  "description": "Atualizacao que reconcilia a colecao de recursos.",
+  "objective": "Validar a substituicao completa (replace-all) dos recursos.",
+  "ideaTypeId": "{{ideaTypeId}}",
+  "resources": [
+    {
+      "id": "COLE_O_ID_DE_UM_RECURSO_EXISTENTE",
+      "type": "text",
+      "content": "Recurso mantido e modificado.",
+      "position": 0
+    },
+    { "type": "text", "content": "Recurso novo adicionado.", "position": 1 }
+  ]
+}
+
+### Criar Ideia com type nao suportado (espera 422 idea.resource.type.unsupported)
+POST {{host}}/ideas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Ideia tipo invalido",
+  "description": "Recurso com type fora do union suportado no MVP.",
+  "objective": "Validar a rejeicao de tipos nao suportados.",
+  "ideaTypeId": "{{ideaTypeId}}",
+  "resources": [
+    { "type": "image", "content": "Conteudo qualquer.", "position": 0 }
+  ]
+}
+
+### Criar Ideia com content vazio em um recurso (espera 422 idea.resource.content.required)
+POST {{host}}/ideas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Ideia recurso vazio",
+  "description": "Recurso com conteudo vazio deve falhar na validacao.",
+  "objective": "Validar a obrigatoriedade do conteudo do recurso.",
+  "ideaTypeId": "{{ideaTypeId}}",
+  "resources": [
+    { "type": "text", "content": "", "position": 0 }
+  ]
+}
+
+### Criar Ideia com 21 recursos (espera 422 idea.resources.too_many)
+# Gere 21 itens no array resources (o limite do MVP e 20 por Ideia).
+POST {{host}}/ideas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Ideia com excesso de recursos",
+  "description": "Tentativa de cadastrar mais recursos do que o permitido.",
+  "objective": "Validar o limite de 20 recursos por Ideia.",
+  "ideaTypeId": "{{ideaTypeId}}",
+  "resources": [
+    { "type": "text", "content": "1", "position": 0 },
+    { "type": "text", "content": "2", "position": 1 },
+    { "type": "text", "content": "3", "position": 2 },
+    { "type": "text", "content": "4", "position": 3 },
+    { "type": "text", "content": "5", "position": 4 },
+    { "type": "text", "content": "6", "position": 5 },
+    { "type": "text", "content": "7", "position": 6 },
+    { "type": "text", "content": "8", "position": 7 },
+    { "type": "text", "content": "9", "position": 8 },
+    { "type": "text", "content": "10", "position": 9 },
+    { "type": "text", "content": "11", "position": 10 },
+    { "type": "text", "content": "12", "position": 11 },
+    { "type": "text", "content": "13", "position": 12 },
+    { "type": "text", "content": "14", "position": 13 },
+    { "type": "text", "content": "15", "position": 14 },
+    { "type": "text", "content": "16", "position": 15 },
+    { "type": "text", "content": "17", "position": 16 },
+    { "type": "text", "content": "18", "position": 17 },
+    { "type": "text", "content": "19", "position": 18 },
+    { "type": "text", "content": "20", "position": 19 },
+    { "type": "text", "content": "21", "position": 20 }
+  ]
+}
+
+### GET /ideas (paginado) — confirme que o payload NAO traz "resources" (espera 200)
+GET {{host}}/ideas?page=1&pageSize=10
+Authorization: Bearer {{token}}
+
+### Cascata: DELETE /ideas/:id de uma Ideia com recursos (espera 204)
+DELETE {{host}}/ideas/{{ideaId}}
+Authorization: Bearer {{token}}
+
+### Cascata: GET /ideas/:id apos o delete (espera 404 idea.not_found — recursos sumiram junto)
+GET {{host}}/ideas/{{ideaId}}
+Authorization: Bearer {{token}}

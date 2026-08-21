@@ -1,0 +1,116 @@
+### Variaveis
+@host = http://localhost:4000
+@token = COLE_O_JWT_DO_USUARIO_AQUI
+@tokenOther = COLE_O_JWT_DE_OUTRO_USUARIO_AQUI
+@ideaTypeId = COLE_O_ID_RETORNADO_NA_LISTAGEM_OU_NO_BANCO
+
+### Registrar usuario para gerar token (espera 201)
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Tipo Owner",
+  "email": "owner.idea-type@example.com",
+  "password": "Strong@123"
+}
+
+### Login (espera 200 com token)
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "owner.idea-type@example.com",
+  "password": "Strong@123"
+}
+
+### Criar Tipo de Ideia valido (espera 201)
+POST {{host}}/idea-types
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Produto Digital",
+  "description": "Tipo voltado para produtos digitais SaaS.",
+  "prompt": "Avalie {{name}}, {{description}}, {{objective}} e {{resources}}."
+}
+
+### Criar faltando campos (espera 422 idea-type.name.required, idea-type.description.required, idea-type.prompt.required)
+POST {{host}}/idea-types
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "",
+  "description": "",
+  "prompt": ""
+}
+
+### Prompt acima do limite (espera 422 idea-type.prompt.max.length)
+POST {{host}}/idea-types
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Tipo Prompt Grande",
+  "description": "Descricao valida do agregado.",
+  "prompt": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+}
+# Repetir o bloco AAAAA ate exceder 8000 caracteres ao reproduzir o cenario.
+
+### Carregar Tipos de Ideia padrao - primeira vez (espera 200 com { "loaded": 4 } enquanto o usuario nao tem nenhum cadastrado)
+POST {{host}}/idea-types/load-defaults
+Authorization: Bearer {{token}}
+
+### Carregar Tipos de Ideia padrao - segunda vez seguida (espera 200 com { "loaded": 0 } pelo gate de idempotencia)
+POST {{host}}/idea-types/load-defaults
+Authorization: Bearer {{token}}
+
+### Confirmar que nao houve duplicacao apos o segundo load (total deve continuar igual ao do primeiro load)
+GET {{host}}/idea-types?page=1&pageSize=10
+Authorization: Bearer {{token}}
+
+### Listar Tipos de Ideia paginado (espera 200 com items + total)
+GET {{host}}/idea-types?page=1&pageSize=10
+Authorization: Bearer {{token}}
+
+### Buscar por id valido (espera 200)
+GET {{host}}/idea-types/{{ideaTypeId}}
+Authorization: Bearer {{token}}
+
+### Buscar por id de outro usuario (espera 404 idea-type.not_found)
+GET {{host}}/idea-types/{{ideaTypeId}}
+Authorization: Bearer {{tokenOther}}
+
+### Atualizar Tipo de Ideia valido (espera 204)
+PUT {{host}}/idea-types/{{ideaTypeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Produto Digital v2",
+  "description": "Descricao atualizada do tipo.",
+  "prompt": "Atualizado: {{name}}, {{description}}, {{objective}}, {{resources}}."
+}
+
+### Atualizar cross-user (espera 403 idea-type.forbidden)
+PUT {{host}}/idea-types/{{ideaTypeId}}
+Authorization: Bearer {{tokenOther}}
+Content-Type: application/json
+
+{
+  "name": "Invasor",
+  "description": "Tentativa de atualizar tipo de outro usuario.",
+  "prompt": "Prompt valido com {{name}} usado para checagem."
+}
+
+### Deletar inexistente (espera 404 idea-type.not_found)
+DELETE {{host}}/idea-types/00000000-0000-4000-8000-000000000000
+Authorization: Bearer {{token}}
+
+### Deletar cross-user (espera 403 idea-type.forbidden)
+DELETE {{host}}/idea-types/{{ideaTypeId}}
+Authorization: Bearer {{tokenOther}}
+
+### Deletar valido (espera 204)
+DELETE {{host}}/idea-types/{{ideaTypeId}}
+Authorization: Bearer {{token}}

@@ -1,0 +1,101 @@
+### Variáveis
+@host = http://localhost:4000
+
+### Registrar usuário com sucesso (espera 201 No Body)
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Joao Silva",
+  "email": "joao.integration@example.com",
+  "password": "Strong@123"
+}
+
+### Registrar usuário duplicado (espera 409 user.email.already.exists)
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Joao Silva",
+  "email": "joao.integration@example.com",
+  "password": "Strong@123"
+}
+
+### Senha fraca (espera 422 user.password.strong.password)
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Maria Souza",
+  "email": "maria.weak@example.com",
+  "password": "123"
+}
+
+### E-mail inválido (espera 422 user.email.invalid.email)
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Maria Souza",
+  "email": "nao-email",
+  "password": "Strong@123"
+}
+
+### Múltiplos erros simultâneos (espera 422 com errors[] contendo várias chaves)
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "",
+  "email": "bad",
+  "password": "123"
+}
+
+### Campos faltando (espera 422 com user.<campo>.required)
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{}
+
+### Login com credenciais válidas (espera 200 { token, user })
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "joao.integration@example.com",
+  "password": "Strong@123"
+}
+
+### Login com e-mail inexistente (espera 401 user.credentials.invalid)
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "ninguem@example.com",
+  "password": "Strong@123"
+}
+
+### Login com senha incorreta (espera 401 user.credentials.invalid)
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "joao.integration@example.com",
+  "password": "SenhaErrada@123"
+}
+
+### Login com e-mail inválido (espera 422 user.email.invalid.email)
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "nao-email",
+  "password": "Strong@123"
+}
+
+### Login com corpo incompleto (espera 422 user.<campo>.required)
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{}
+

@@ -1,0 +1,24 @@
+name: ideias-projeto-ideias-backend-db
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ideias-projeto-ideias-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ideias_projeto_ideias
+      POSTGRES_PASSWORD: docker
+      POSTGRES_DB: ideias_projeto_ideias_db
+    ports:
+      - '6327:5432'
+    volumes:
+      - ideias-projeto-ideias-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ideias_projeto_ideias']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ideias-projeto-ideias-postgres-data:
+    driver: local
