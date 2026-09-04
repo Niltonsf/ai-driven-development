@@ -1,0 +1,42 @@
+[
+  {
+    "name": "Conta Conjunta BB",
+    "description": "Conta corrente conjunta usada para despesas compartilhadas da família",
+    "agency": "1234-5",
+    "accountNumber": "00012345-6",
+    "institutionName": "Banco do Brasil",
+    "active": true,
+    "color": "#FAE000",
+    "icon": "landmark"
+  },
+  {
+    "name": "Conta Poupança Caixa",
+    "description": "Poupança para reserva de emergência",
+    "agency": "0987",
+    "accountNumber": "013-00098765-4",
+    "institutionName": "Caixa Econômica Federal",
+    "active": true,
+    "color": "#0070AF",
+    "icon": "piggy-bank"
+  },
+  {
+    "name": "C6 Salário",
+    "description": "Conta corrente para recebimento de salário",
+    "agency": "0001",
+    "accountNumber": "23456789-0",
+    "institutionName": "C6 Bank",
+    "active": true,
+    "color": "#242424",
+    "icon": "wallet"
+  },
+  {
+    "name": "Conta Investimento XP",
+    "description": "Conta de investimentos para aportes mensais",
+    "agency": "0001",
+    "accountNumber": "987654-3",
+    "institutionName": "XP Investimentos",
+    "active": true,
+    "color": "#0F0F0F",
+    "icon": "trending-up"
+  }
+]

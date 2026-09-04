@@ -1,0 +1,128 @@
+###############################################################################
+# Testes de integração — ContasController (execução MANUAL)
+#
+# Plugin: REST Client (humao.rest-client) para VS Code
+# Pré-requisito: backend em execução na porta 4000 (npm run start:dev)
+# APIs públicas (decorator @Public) — não exigem autenticação.
+#
+# Como usar:
+#   - Clique em "Send Request" acima de cada requisição.
+#   - Rode o "FLUXO CRUD" (POST -> GET -> PUT/POST -> DELETE) na ordem para
+#     manter os dados consistentes e re-executáveis (o DELETE limpa o registro).
+#
+# Endpoints cobertos (contas.controller.ts):
+#   POST   /contas       -> salvar (criar/atualizar)  [200]
+#   DELETE /contas/:id   -> excluir                    [204]
+#   GET    /contas/:id   -> consultar por id
+#   GET    /contas       -> consultar paginado
+###############################################################################
+
+@baseUrl = http://localhost:4000
+
+# Identificador e nome fixos usados no fluxo CRUD ponta a ponta.
+# Como o POST retorna corpo vazio (void), não há id para capturar da resposta;
+# por isso fixamos um UUID válido aqui e o reutilizamos nas etapas seguintes.
+@contaId = 11111111-1111-4111-8111-111111111111
+@contaNome = Conta Integração REST Client
+
+
+###############################################################################
+# QUERIES — consultarPaginado  (GET /contas)
+###############################################################################
+
+### [Q1] Listagem paginada com valores padrão (page=1, pageSize=10)
+GET {{baseUrl}}/contas
+Accept: application/json
+
+### [Q2] Paginação explícita (page=2, pageSize=2)
+GET {{baseUrl}}/contas?page=2&pageSize=2
+Accept: application/json
+
+### [Q3] Parâmetros inválidos são normalizados (page<=0 -> 1, pageSize inválido -> 10)
+GET {{baseUrl}}/contas?page=-3&pageSize=abc
+Accept: application/json
+
+### [Q4] pageSize acima do máximo é limitado a 50 (MAX_PAGE_SIZE)
+GET {{baseUrl}}/contas?page=1&pageSize=999
+Accept: application/json
+
+
+###############################################################################
+# QUERIES — consultarPorId  (GET /contas/:id)
+###############################################################################
+
+### [Q5] Consulta por id inexistente -> 404 Not Found
+GET {{baseUrl}}/contas/00000000-0000-4000-8000-000000000000
+Accept: application/json
+
+
+###############################################################################
+# COMMANDS — validações de salvar (POST /contas)
+###############################################################################
+
+### [C1] Criar com nome muito curto (< 3 chars) -> 400 (NOME_CONTA_TOO_SHORT)
+POST {{baseUrl}}/contas
+Content-Type: application/json
+
+{
+  "name": "ab"
+}
+
+### [C2] Criar com cor inválida (não é hex) -> 400
+POST {{baseUrl}}/contas
+Content-Type: application/json
+
+{
+  "name": "Conta Cor Inválida",
+  "color": "vermelho"
+}
+
+
+###############################################################################
+# FLUXO CRUD — execute na ordem (F1 -> F2 -> F3 -> F4 -> F5)
+###############################################################################
+
+### [F1] Criar conta completa (id e nome fixos) -> 200
+POST {{baseUrl}}/contas
+Content-Type: application/json
+
+{
+  "id": "{{contaId}}",
+  "name": "{{contaNome}}",
+  "description": "Conta criada pelos testes de integração",
+  "agency": "0001",
+  "accountNumber": "123456-7",
+  "institutionName": "Banco Exemplo",
+  "color": "#1E90FF",
+  "icon": "wallet",
+  "active": true
+}
+
+### [F2] Consultar a conta recém-criada por id -> 200 com os dados acima
+GET {{baseUrl}}/contas/{{contaId}}
+Accept: application/json
+
+### [F3] Tentar criar OUTRA conta com o MESMO nome -> 400 (CONTA_NAME_ALREADY_IN_USE)
+POST {{baseUrl}}/contas
+Content-Type: application/json
+
+{
+  "name": "{{contaNome}}"
+}
+
+### [F4] Atualizar a conta existente (mesmo id) -> 200
+POST {{baseUrl}}/contas
+Content-Type: application/json
+
+{
+  "id": "{{contaId}}",
+  "name": "{{contaNome}}",
+  "description": "Descrição atualizada via teste de integração",
+  "active": false
+}
+
+### [F5] Excluir a conta criada -> 204 No Content (também limpa para re-execução)
+DELETE {{baseUrl}}/contas/{{contaId}}
+
+### [F6] Excluir novamente / id inexistente -> 404 Not Found
+DELETE {{baseUrl}}/contas/{{contaId}}

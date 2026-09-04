@@ -1,0 +1,6 @@
+{
+  "defaults": {
+    "namespace": "@arquitetura",
+    "sharedModulePath": "packages/shared"
+  }
+}

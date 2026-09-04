@@ -1,0 +1,1 @@
+/module-entity Alterar a entidade modules/contas/src/conta/model/conta.entity.ts para o padrão de entidade do projeto. Utilize os objetos de valor que foram criados e caso seja necessário, crie novos VOs usando /module-value-object.

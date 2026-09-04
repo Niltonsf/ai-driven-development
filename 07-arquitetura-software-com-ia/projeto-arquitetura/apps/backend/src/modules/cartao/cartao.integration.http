@@ -1,0 +1,140 @@
+###############################################################################
+# Testes de integração — CartaoController (execução MANUAL)
+#
+# Plugin: REST Client (humao.rest-client) para VS Code
+# Pré-requisito: backend em execução na porta 4000 (npm run start:dev)
+# APIs públicas (decorator @Public) — não exigem autenticação.
+#
+# Como usar:
+#   - Clique em "Send Request" acima de cada requisição.
+#   - Rode o "FLUXO CRUD" (POST -> GET -> POST -> POST -> DELETE) na ordem para
+#     manter os dados consistentes e re-executáveis (o DELETE limpa o registro).
+#
+# Endpoints cobertos (cartao.controller.ts):
+#   POST   /cartao       -> salvar (criar/atualizar)  [200]
+#   DELETE /cartao/:id   -> excluir                    [204]
+#   GET    /cartao/:id   -> consultar por id
+#   GET    /cartao       -> consultar paginado
+###############################################################################
+
+@baseUrl = http://localhost:4000
+
+# Identificador e nome fixos usados no fluxo CRUD ponta a ponta.
+# Como o POST retorna corpo vazio (void), não há id para capturar da resposta;
+# por isso fixamos um UUID válido aqui e o reutilizamos nas etapas seguintes.
+@cartaoId = 22222222-2222-4222-8222-222222222222
+@cartaoNome = Cartao Integração REST Client
+
+
+###############################################################################
+# QUERIES — consultarPaginado  (GET /cartao)
+###############################################################################
+
+### [Q1] Listagem paginada com valores padrão (page=1, pageSize=10)
+GET {{baseUrl}}/cartao
+Accept: application/json
+
+### [Q2] Paginação explícita (page=2, pageSize=2)
+GET {{baseUrl}}/cartao?page=2&pageSize=2
+Accept: application/json
+
+### [Q3] Parâmetros inválidos são normalizados (page<=0 -> 1, pageSize inválido -> 10)
+GET {{baseUrl}}/cartao?page=-3&pageSize=abc
+Accept: application/json
+
+### [Q4] pageSize acima do máximo é limitado a 50 (MAX_PAGE_SIZE)
+GET {{baseUrl}}/cartao?page=1&pageSize=999
+Accept: application/json
+
+
+###############################################################################
+# QUERIES — consultarPorId  (GET /cartao/:id)
+###############################################################################
+
+### [Q5] Consulta por id inexistente -> 404 Not Found
+GET {{baseUrl}}/cartao/00000000-0000-4000-8000-000000000000
+Accept: application/json
+
+
+###############################################################################
+# COMMANDS — validações de salvar (POST /cartao)
+###############################################################################
+
+### [C1] Criar com nome muito curto (< 3 chars) -> 400
+POST {{baseUrl}}/cartao
+Content-Type: application/json
+
+{
+  "name": "ab"
+}
+
+### [C2] Criar com cor inválida (não é hex) -> 400
+POST {{baseUrl}}/cartao
+Content-Type: application/json
+
+{
+  "name": "Cartao Cor Inválida",
+  "color": "vermelho"
+}
+
+### [C3] Criar com dia de fechamento inválido (> 31) -> 400
+POST {{baseUrl}}/cartao
+Content-Type: application/json
+
+{
+  "name": "Cartao Dia Inválido",
+  "closingDay": 45
+}
+
+
+###############################################################################
+# FLUXO CRUD — execute na ordem (F1 -> F2 -> F3 -> F4 -> F5 -> F6)
+###############################################################################
+
+### [F1] Criar cartão completo (id e nome fixos) -> 200
+POST {{baseUrl}}/cartao
+Content-Type: application/json
+
+{
+  "id": "{{cartaoId}}",
+  "name": "{{cartaoNome}}",
+  "description": "Cartão criado pelos testes de integração",
+  "flag": "Mastercard",
+  "lastDigits": "4321",
+  "limit": 12000,
+  "closingDay": 28,
+  "dueDay": 5,
+  "color": "#820AD1",
+  "icon": "credit-card",
+  "active": true
+}
+
+### [F2] Consultar o cartão recém-criado por id -> 200 com os dados acima
+GET {{baseUrl}}/cartao/{{cartaoId}}
+Accept: application/json
+
+### [F3] Tentar criar OUTRO cartão com o MESMO nome -> 400 (CARTAO_NAME_ALREADY_IN_USE)
+POST {{baseUrl}}/cartao
+Content-Type: application/json
+
+{
+  "name": "{{cartaoNome}}"
+}
+
+### [F4] Atualizar o cartão existente (mesmo id) -> 200
+POST {{baseUrl}}/cartao
+Content-Type: application/json
+
+{
+  "id": "{{cartaoId}}",
+  "name": "{{cartaoNome}}",
+  "description": "Descrição atualizada via teste de integração",
+  "limit": 20000,
+  "active": false
+}
+
+### [F5] Excluir o cartão criado -> 204 No Content (também limpa para re-execução)
+DELETE {{baseUrl}}/cartao/{{cartaoId}}
+
+### [F6] Excluir novamente / id inexistente -> 404 Not Found
+DELETE {{baseUrl}}/cartao/{{cartaoId}}

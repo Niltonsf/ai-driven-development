@@ -1,0 +1,18 @@
+// Prisma models for module: contas
+
+model Conta {
+  id              String    @id @db.Uuid
+  name            String    @unique @db.VarChar(80)
+  description     String?   @db.VarChar(256)
+  agency          String?   @db.VarChar(20)
+  accountNumber   String?   @map("account_number") @db.VarChar(30)
+  institutionName String?   @map("institution_name") @db.VarChar(120)
+  active          Boolean   @default(true)
+  color           String?   @db.VarChar(9)
+  icon            String?   @db.VarChar(60)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  @@map("contas")
+}

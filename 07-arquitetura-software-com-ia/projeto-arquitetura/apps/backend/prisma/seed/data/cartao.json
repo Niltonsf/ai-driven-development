@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Nubank Roxinho",
+    "description": "Cartão de crédito para gastos do dia a dia",
+    "brand": "Mastercard",
+    "lastDigits": "4321",
+    "limit": 8000,
+    "closingDay": 28,
+    "dueDay": 5,
+    "active": true,
+    "color": "#820AD1",
+    "icon": "credit-card"
+  },
+  {
+    "name": "Inter Black",
+    "description": "Cartão sem anuidade com cashback",
+    "brand": "Visa",
+    "lastDigits": "1098",
+    "limit": 15000,
+    "closingDay": 20,
+    "dueDay": 1,
+    "active": true,
+    "color": "#FF7A00",
+    "icon": "credit-card"
+  },
+  {
+    "name": "C6 Carbon",
+    "description": "Cartão premium para viagens",
+    "brand": "Mastercard",
+    "lastDigits": "7777",
+    "limit": 30000,
+    "closingDay": 10,
+    "dueDay": 17,
+    "active": true,
+    "color": "#242424",
+    "icon": "plane"
+  },
+  {
+    "name": "XP Visa Infinite",
+    "description": "Cartão de investidor com pontos",
+    "brand": "Visa",
+    "lastDigits": "2025",
+    "limit": 50000,
+    "closingDay": 15,
+    "dueDay": 22,
+    "active": false,
+    "color": "#0F0F0F",
+    "icon": "gem"
+  }
+]

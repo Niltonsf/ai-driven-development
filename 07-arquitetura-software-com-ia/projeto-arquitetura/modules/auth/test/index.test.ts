@@ -1,0 +1,8 @@
+/// <reference types="jest" />
+import { getModuleName } from '../src';
+
+describe('getModuleName', () => {
+  it('returns module name', () => {
+    expect(getModuleName()).toBe('auth');
+  });
+});
