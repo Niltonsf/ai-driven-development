@@ -1,0 +1,535 @@
+@baseUrl = http://localhost:4000
+@password = #Senha123
+
+# Roteiro executável em ordem (Rest Client). Cada execução registra dois usuários novos
+# (e-mails com {{$guid}}), então as contagens de `meta` abaixo valem para uma execução completa.
+# GET /statement devolve o período inteiro em uma resposta, sem paginação:
+# { "data": [StatementEntryDTO...], "meta": { "page": 1, "pageSize": 500, "total": N, "totalPages": 1 } }
+# ordenado por expectedOn desc (no empate: avulsas, depois gravadas, depois geradas).
+# Na entrada "TRANSACTION" o bloco da série (seriesId, seriesName, seriesKind, occurrenceIndex,
+# occurrenceOn, installments) é todo null. O "id" de uma entrada "SCHEDULED" não gravada é efêmero.
+# Erros seguem o formato do ApiExceptionFilter:
+# { "statusCode": 400|401, "error": "...", "message": ["CODIGO", ...], "path": "...", "timestamp": "..." }
+
+############################################################
+# Preparação — usuário A (dono do extrato)
+############################################################
+
+### POST /auth/register — registrar o usuário A (espera 201 Created)
+# @name registerA
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Usuario Extrato",
+  "email": "extrato.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário A (espera 200 OK com token)
+# @name loginA
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerA.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@token = {{loginA.response.body.$.token}}
+
+### POST /accounts — criar a conta do usuário A (espera 201 Created)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Conta Corrente",
+  "type": "CHECKING"
+}
+
+###
+
+### GET /accounts — capturar o id da conta do usuário A (espera 200 OK)
+# @name accountsA
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{token}}
+
+###
+
+@accountId = {{accountsA.response.body.$.items[0].id}}
+
+### POST /cards — criar o cartão do usuário A (espera 201 Created)
+POST {{baseUrl}}/cards
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Cartao Principal",
+  "brand": "VISA",
+  "closingDay": 5,
+  "dueDay": 12
+}
+
+###
+
+### GET /cards — capturar o id do cartão do usuário A (espera 200 OK)
+# @name cardsA
+GET {{baseUrl}}/cards
+Authorization: Bearer {{token}}
+
+###
+
+@creditCardId = {{cardsA.response.body.$.items[0].id}}
+
+### POST /categories/default — aplicar as categorias padrão do usuário A (espera 201 Created)
+POST {{baseUrl}}/categories/default
+Authorization: Bearer {{token}}
+
+###
+
+### GET /categories — capturar uma subcategoria do usuário A (espera 200 OK)
+# @name categoriesA
+GET {{baseUrl}}/categories
+Authorization: Bearer {{token}}
+
+###
+
+@subcategoryId = {{categoriesA.response.body.$[0].subcategories[0].id}}
+
+############################################################
+# Preparação — usuário B (não enxerga o extrato de A)
+############################################################
+
+### POST /auth/register — registrar o usuário B (espera 201 Created)
+# @name registerB
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Outro Usuario",
+  "email": "outro.extrato.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário B (espera 200 OK)
+# @name loginB
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerB.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@tokenB = {{loginB.response.body.$.token}}
+
+############################################################
+# Extrato sem nenhuma gravação
+############################################################
+
+### POST /transaction-series — parcelamento mensal de 12 no dia 10, início 2026-09-15, com cartão.
+### Ocorrências: índice 0 = 2026-10-10, 1 = 2026-11-10, 2 = 2026-12-10 ... 11 = 2027-09-10
+### (espera 201 Created com { "id": "<uuid>" })
+# @name createInstallment
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Notebook parcelado",
+  "value": 250.5,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "creditCardId": "{{creditCardId}}",
+  "subcategoryId": "{{subcategoryId}}",
+  "kind": "CLOSED",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 10,
+  "startDate": "2026-09-15",
+  "installments": 12
+}
+
+###
+
+@seriesId = {{createInstallment.response.body.$.id}}
+
+### POST /transactions — transação avulsa em outubro, sem cartão (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Mercado",
+  "value": 99.9,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-10-15"
+}
+
+###
+
+### GET /statement — outubro: a avulsa e a 1ª parcela gerada, sem nada gravado
+### (espera 200 OK com "meta": { "page": 1, "pageSize": 500, "total": 2, "totalPages": 1 } e "data":
+### [0] "kind": "TRANSACTION", "name": "Mercado", "expectedOn": "2026-10-15", "value": 99.9,
+###     "seriesId": null, "occurrenceIndex": null, "installments": null;
+### [1] "kind": "SCHEDULED", "seriesId": "<seriesId>", "occurrenceIndex": 0, "expectedOn": "2026-10-10",
+###     "occurrenceOn": "2026-10-10", "value": 250.5, "status": "PENDING", "seriesName": "Notebook parcelado",
+###     "seriesKind": "CLOSED", "installments": 12, "creditCardName": "Cartao Principal")
+GET {{baseUrl}}/statement?from=2026-10-01&to=2026-10-31
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement — novembro: só a 2ª parcela gerada
+### (espera 200 OK com "meta.total": 1 e a entrada "occurrenceIndex": 1, "expectedOn": "2026-11-10")
+GET {{baseUrl}}/statement?from=2026-11-01&to=2026-11-30
+Authorization: Bearer {{token}}
+
+###
+
+### GET /scheduled-transactions/:seriesId/0 — abrir a ocorrência gerada
+### (espera 200 OK com "materialized": false, "status": "PENDING" e "id" preenchido)
+# @name occurrence0
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Authorization: Bearer {{token}}
+
+###
+
+@occurrence0Id = {{occurrence0.response.body.$.id}}
+
+############################################################
+# Alterar o valor de uma ocorrência
+############################################################
+
+### PUT /scheduled-transactions/:seriesId/0 — valor 300 (espera 200 OK com { "id": "<occurrence0Id>" })
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{occurrence0Id}}",
+  "name": "Notebook parcelado",
+  "value": 300,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "creditCardId": "{{creditCardId}}",
+  "subcategoryId": "{{subcategoryId}}",
+  "status": "PENDING",
+  "expectedOn": "2026-10-10"
+}
+
+###
+
+### GET /statement — outubro traz a versão gravada, e uma só
+### (espera 200 OK com "meta.total": 2; a entrada da série tem "occurrenceIndex": 0, "id" igual a
+### occurrence0Id e "value": 300 — nenhuma outra entrada com "occurrenceIndex": 0 e "value": 250.5)
+GET {{baseUrl}}/statement?from=2026-10-01&to=2026-10-31
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Mover a ocorrência para o mês seguinte
+############################################################
+
+### GET /scheduled-transactions/:seriesId/1 — capturar o id efêmero da 2ª parcela
+### (espera 200 OK com "materialized": false e "occurrenceOn": "2026-11-10")
+# @name occurrence1
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/1
+Authorization: Bearer {{token}}
+
+###
+
+### PUT /scheduled-transactions/:seriesId/1 — mover de 2026-11-10 para 2026-12-05
+### (espera 200 OK com { "id": "<id do occurrence1>" })
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{occurrence1.response.body.$.id}}",
+  "name": "Notebook parcelado",
+  "value": 250.5,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "creditCardId": "{{creditCardId}}",
+  "subcategoryId": "{{subcategoryId}}",
+  "expectedOn": "2026-12-05"
+}
+
+###
+
+### GET /statement — novembro: a parcela saiu e não foi regerada
+### (espera 200 OK com "data": [] e "meta.total": 0)
+GET {{baseUrl}}/statement?from=2026-11-01&to=2026-11-30
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement — dezembro: a movida entrou, ao lado da 3ª parcela gerada
+### (espera 200 OK com "meta.total": 2 e "data":
+### [0] "occurrenceIndex": 2, "expectedOn": "2026-12-10", "occurrenceOn": "2026-12-10", "value": 250.5;
+### [1] "occurrenceIndex": 1, "expectedOn": "2026-12-05", "occurrenceOn": "2026-11-10", "value": 250.5)
+GET {{baseUrl}}/statement?from=2026-12-01&to=2026-12-31
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Efetivar e cancelar
+############################################################
+
+### PUT /scheduled-transactions/:seriesId/0 — efetivar (espera 200 OK com { "id": "<occurrence0Id>" })
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{occurrence0Id}}",
+  "name": "Notebook parcelado",
+  "value": 300,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "creditCardId": "{{creditCardId}}",
+  "subcategoryId": "{{subcategoryId}}",
+  "status": "SETTLED",
+  "expectedOn": "2026-10-10",
+  "settledOn": "2026-10-10"
+}
+
+###
+
+### GET /statement — filtro por situação efetivada: só a ocorrência efetivada (geradas são sempre PENDING)
+### (espera 200 OK com "meta.total": 1, "status": "SETTLED", "settledOn": "2026-10-10", "occurrenceIndex": 0)
+GET {{baseUrl}}/statement?from=2026-10-01&to=2026-10-31&status=SETTLED
+Authorization: Bearer {{token}}
+
+###
+
+### PUT /scheduled-transactions/:seriesId/0 — cancelar (espera 200 OK com { "id": "<occurrence0Id>" })
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{occurrence0Id}}",
+  "name": "Notebook parcelado",
+  "value": 300,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "creditCardId": "{{creditCardId}}",
+  "subcategoryId": "{{subcategoryId}}",
+  "status": "CANCELED",
+  "expectedOn": "2026-10-10"
+}
+
+###
+
+### GET /statement — a cancelada continua visível no mês
+### (espera 200 OK com "meta.total": 2 e a entrada da série com "status": "CANCELED" e "settledOn": null)
+GET {{baseUrl}}/statement?from=2026-10-01&to=2026-10-31
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Filtros (mesma semântica de GET /transactions)
+############################################################
+
+### GET /statement — só com cartão
+### (espera 200 OK com "meta.total": 1: só a entrada da série; "Mercado" não tem cartão)
+GET {{baseUrl}}/statement?from=2026-10-01&to=2026-10-31&onlyCreditCard=true
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement — cartão específico tem precedência sobre onlyCreditCard
+### (espera 200 OK com "meta.total": 1: só a entrada da série)
+GET {{baseUrl}}/statement?from=2026-10-01&to=2026-10-31&creditCardId={{creditCardId}}&onlyCreditCard=false
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement — situação pendente: a cancelada fica de fora
+### (espera 200 OK com "meta.total": 1: só "Mercado")
+GET {{baseUrl}}/statement?from=2026-10-01&to=2026-10-31&status=PENDING
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement — busca parcial sem diferenciar maiúsculas
+### (espera 200 OK com "meta.total": 1: só a entrada "Notebook parcelado")
+GET {{baseUrl}}/statement?from=2026-10-01&to=2026-10-31&search=NOTEBOOK
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement — direção fora do conjunto
+### (espera 400 com "message": ["INVALID_DIRECTION"])
+GET {{baseUrl}}/statement?from=2026-10-01&to=2026-10-31&direction=SIDEWAYS
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Reverter para a série
+############################################################
+
+### DELETE /scheduled-transactions/:seriesId/0 — reverter (espera 200 OK com { "success": true })
+DELETE {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement — outubro volta a trazer a ocorrência gerada
+### (espera 200 OK com "meta.total": 2 e a entrada da série com "occurrenceIndex": 0, "value": 250.5,
+### "status": "PENDING" e um "id" diferente de occurrence0Id)
+GET {{baseUrl}}/statement?from=2026-10-01&to=2026-10-31
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Alterar a série
+############################################################
+
+### PUT /transaction-series/:id — valor da série passa a 275 (espera 200 OK com { "id": "<seriesId>" })
+PUT {{baseUrl}}/transaction-series/{{seriesId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Notebook parcelado",
+  "value": 275,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "creditCardId": "{{creditCardId}}",
+  "subcategoryId": "{{subcategoryId}}",
+  "kind": "CLOSED",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 10,
+  "startDate": "2026-09-15",
+  "installments": 12
+}
+
+###
+
+### GET /statement — dezembro: a gerada traz o valor novo e a gravada mantém o dela
+### (espera 200 OK com "meta.total": 2 e "data":
+### [0] "occurrenceIndex": 2, "expectedOn": "2026-12-10", "value": 275;
+### [1] "occurrenceIndex": 1, "expectedOn": "2026-12-05", "value": 250.5)
+GET {{baseUrl}}/statement?from=2026-12-01&to=2026-12-31
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement — outubro: a revertida também segue a série
+### (espera 200 OK com a entrada da série "occurrenceIndex": 0 e "value": 275)
+GET {{baseUrl}}/statement?from=2026-10-01&to=2026-10-31
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Isolamento por usuário
+############################################################
+
+### GET /statement — o usuário B não enxerga nada do usuário A
+### (espera 200 OK com "data": [] e "meta": { "page": 1, "pageSize": 500, "total": 0, "totalPages": 1 })
+GET {{baseUrl}}/statement?from=2026-10-01&to=2026-12-31
+Authorization: Bearer {{tokenB}}
+
+###
+
+############################################################
+# Excluir a série
+############################################################
+
+### DELETE /transaction-series/:id — exclusão lógica (espera 200 OK com { "success": true })
+DELETE {{baseUrl}}/transaction-series/{{seriesId}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement — dezembro: somem a gerada e a gravada da série excluída
+### (espera 200 OK com "data": [] e "meta.total": 0)
+GET {{baseUrl}}/statement?from=2026-12-01&to=2026-12-31
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement — outubro: sobra só a avulsa
+### (espera 200 OK com "meta.total": 1 e a entrada "kind": "TRANSACTION", "name": "Mercado")
+GET {{baseUrl}}/statement?from=2026-10-01&to=2026-10-31
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Período inválido
+############################################################
+
+### GET /statement sem from e sem to (espera 400 com "message": ["INVALID_STATEMENT_PERIOD"])
+GET {{baseUrl}}/statement
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement só com from (espera 400 com "message": ["INVALID_STATEMENT_PERIOD"])
+GET {{baseUrl}}/statement?from=2026-10-01
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement só com to (espera 400 com "message": ["INVALID_STATEMENT_PERIOD"])
+GET {{baseUrl}}/statement?to=2026-10-31
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement com período invertido (espera 400 com "message": ["INVALID_STATEMENT_PERIOD"])
+GET {{baseUrl}}/statement?from=2026-10-31&to=2026-10-01
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement com data malformada (espera 400 com "message": ["INVALID_STATEMENT_PERIOD"])
+GET {{baseUrl}}/statement?from=2026-10-1&to=2026-10-31
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement com data inexistente (espera 400 com "message": ["INVALID_STATEMENT_PERIOD"])
+GET {{baseUrl}}/statement?from=2026-02-01&to=2026-02-30
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# GET /transactions inalterado
+############################################################
+
+### GET /transactions — mesmo formato, paginação e teto de antes
+### (espera 200 OK com "meta": { "page": 1, "pageSize": 100, "total": 1, "totalPages": 1 } e "data" só com "Mercado")
+GET {{baseUrl}}/transactions?pageSize=500
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Sem token
+############################################################
+
+### GET /statement sem token (espera 401 Unauthorized)
+GET {{baseUrl}}/statement?from=2026-10-01&to=2026-10-31

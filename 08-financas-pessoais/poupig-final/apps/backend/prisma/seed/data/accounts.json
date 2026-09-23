@@ -1,0 +1,284 @@
+[
+  {
+    "name": "Conta Corrente Principal",
+    "description": "Conta corrente do banco principal para movimentação diária",
+    "type": "CHECKING",
+    "accountNumber": "12345-6",
+    "agency": "0001",
+    "financialInstitution": "Banco do Brasil",
+    "color": "#FFB300",
+    "icon": "building-2",
+    "isActive": true
+  },
+  {
+    "name": "Poupança Reserva de Emergência",
+    "description": "Reserva de emergência para imprevistos",
+    "type": "SAVINGS",
+    "accountNumber": "98765-4",
+    "agency": "0002",
+    "financialInstitution": "Caixa Econômica Federal",
+    "color": "#43A047",
+    "icon": "piggy-bank",
+    "isActive": true
+  },
+  {
+    "name": "Carteira",
+    "description": "Dinheiro físico em espécie",
+    "type": "CASH",
+    "financialInstitution": null,
+    "color": "#8D6E63",
+    "icon": "wallet",
+    "isActive": true
+  },
+  {
+    "name": "Tesouro Direto",
+    "description": "Investimentos em títulos públicos federais",
+    "type": "INVESTMENT",
+    "financialInstitution": "Rico Investimentos",
+    "color": "#1E88E5",
+    "icon": "trending-up",
+    "isActive": true
+  },
+  {
+    "name": "Vale Alimentação",
+    "description": "Benefício alimentação da empresa",
+    "type": "OTHER",
+    "financialInstitution": "Sodexo",
+    "color": "#E53935",
+    "icon": "utensils",
+    "isActive": true
+  },
+  {
+    "name": "Conta Itaú PF",
+    "description": "Conta corrente pessoal no Itaú",
+    "type": "CHECKING",
+    "accountNumber": "23456-7",
+    "agency": "1234",
+    "financialInstitution": "Itaú Unibanco",
+    "color": "#F57C00",
+    "icon": "building-2",
+    "isActive": true
+  },
+  {
+    "name": "Nubank",
+    "description": "Conta digital do Nubank",
+    "type": "CHECKING",
+    "accountNumber": "654321-0",
+    "agency": "0001",
+    "financialInstitution": "Nu Pagamentos S.A.",
+    "color": "#7C3AED",
+    "icon": "smartphone",
+    "isActive": true
+  },
+  {
+    "name": "Inter Conta Digital",
+    "description": "Conta digital do Banco Inter",
+    "type": "CHECKING",
+    "accountNumber": "789012-3",
+    "agency": "0001",
+    "financialInstitution": "Banco Inter",
+    "color": "#FF6D00",
+    "icon": "smartphone",
+    "isActive": true
+  },
+  {
+    "name": "Poupança Viagem",
+    "description": "Poupança separada para viagens e férias",
+    "type": "SAVINGS",
+    "accountNumber": "11223-3",
+    "agency": "0003",
+    "financialInstitution": "Bradesco",
+    "color": "#00ACC1",
+    "icon": "plane",
+    "isActive": true
+  },
+  {
+    "name": "CDB Santander",
+    "description": "Certificado de depósito bancário com liquidez diária",
+    "type": "INVESTMENT",
+    "financialInstitution": "Santander",
+    "color": "#E53935",
+    "icon": "chart-bar",
+    "isActive": true
+  },
+  {
+    "name": "Fundo de Ações XP",
+    "description": "Fundo de investimento em renda variável",
+    "type": "INVESTMENT",
+    "financialInstitution": "XP Investimentos",
+    "color": "#1565C0",
+    "icon": "trending-up",
+    "isActive": true
+  },
+  {
+    "name": "LCI Bradesco",
+    "description": "Letra de crédito imobiliário isenta de IR",
+    "type": "INVESTMENT",
+    "financialInstitution": "Bradesco",
+    "color": "#E91E8C",
+    "icon": "home",
+    "isActive": true
+  },
+  {
+    "name": "Vale Refeição",
+    "description": "Benefício refeição para uso em restaurantes",
+    "type": "OTHER",
+    "financialInstitution": "Alelo",
+    "color": "#2E7D32",
+    "icon": "utensils",
+    "isActive": true
+  },
+  {
+    "name": "Vale Transporte",
+    "description": "Benefício transporte fornecido pela empresa",
+    "type": "OTHER",
+    "financialInstitution": "ValeCard",
+    "color": "#0288D1",
+    "icon": "bus",
+    "isActive": true
+  },
+  {
+    "name": "Conta Empresa - CNPJ Principal",
+    "description": "Conta corrente pessoa jurídica da empresa principal",
+    "type": "CHECKING",
+    "accountNumber": "55001-8",
+    "agency": "3010",
+    "financialInstitution": "Banco do Brasil",
+    "color": "#F9A825",
+    "icon": "briefcase",
+    "isActive": true
+  },
+  {
+    "name": "Conta Empresa - Sicoob",
+    "description": "Conta corrente PJ na cooperativa de crédito",
+    "type": "CHECKING",
+    "accountNumber": "44002-5",
+    "agency": "0201",
+    "financialInstitution": "Sicoob",
+    "color": "#33691E",
+    "icon": "briefcase",
+    "isActive": true
+  },
+  {
+    "name": "Capital de Giro Empresa",
+    "description": "Conta para capital de giro e operações da empresa",
+    "type": "CHECKING",
+    "accountNumber": "33003-2",
+    "agency": "0500",
+    "financialInstitution": "Itaú Empresas",
+    "color": "#BF360C",
+    "icon": "building",
+    "isActive": true
+  },
+  {
+    "name": "Caixa Empresa",
+    "description": "Caixa físico do estabelecimento comercial",
+    "type": "CASH",
+    "financialInstitution": null,
+    "color": "#4E342E",
+    "icon": "landmark",
+    "isActive": true
+  },
+  {
+    "name": "Reserva PJ - CDB",
+    "description": "Reserva financeira da empresa em CDB",
+    "type": "INVESTMENT",
+    "financialInstitution": "BTG Pactual Empresas",
+    "color": "#1A237E",
+    "icon": "chart-bar",
+    "isActive": true
+  },
+  {
+    "name": "Conta Empresa - Nubank PJ",
+    "description": "Conta PJ digital no Nubank",
+    "type": "CHECKING",
+    "accountNumber": "66004-9",
+    "agency": "0001",
+    "financialInstitution": "Nu Pagamentos S.A.",
+    "color": "#6A1B9A",
+    "icon": "briefcase",
+    "isActive": true
+  },
+  {
+    "name": "Conta Empresa - Mercado Pago",
+    "description": "Conta digital para recebimento de vendas online",
+    "type": "CHECKING",
+    "financialInstitution": "Mercado Pago",
+    "color": "#00B1EA",
+    "icon": "store",
+    "isActive": true
+  },
+  {
+    "name": "Conta Poupança Filhos",
+    "description": "Poupança destinada à educação dos filhos",
+    "type": "SAVINGS",
+    "accountNumber": "77005-1",
+    "agency": "0004",
+    "financialInstitution": "Caixa Econômica Federal",
+    "color": "#558B2F",
+    "icon": "graduation-cap",
+    "isActive": true
+  },
+  {
+    "name": "FGTS",
+    "description": "Fundo de garantia por tempo de serviço",
+    "type": "OTHER",
+    "financialInstitution": "Caixa Econômica Federal",
+    "color": "#0277BD",
+    "icon": "shield",
+    "isActive": true
+  },
+  {
+    "name": "Conta Sicredi PJ",
+    "description": "Conta corrente PJ na cooperativa Sicredi",
+    "type": "CHECKING",
+    "accountNumber": "88006-7",
+    "agency": "0102",
+    "financialInstitution": "Sicredi",
+    "color": "#1B5E20",
+    "icon": "building",
+    "isActive": false
+  },
+  {
+    "name": "Previdência Privada PGBL",
+    "description": "Previdência complementar com benefício fiscal",
+    "type": "INVESTMENT",
+    "financialInstitution": "Brasilprev",
+    "color": "#4527A0",
+    "icon": "shield-check",
+    "isActive": true
+  },
+  {
+    "name": "Conta Bradesco PF",
+    "description": "Conta corrente pessoal desativada no Bradesco",
+    "type": "CHECKING",
+    "accountNumber": "99007-3",
+    "agency": "0800",
+    "financialInstitution": "Bradesco",
+    "color": "#AD1457",
+    "icon": "building-2",
+    "isActive": false
+  },
+  {
+    "name": "Conta Rendimento C6 Bank",
+    "description": "Conta digital com rendimento automático de 100% CDI",
+    "type": "CHECKING",
+    "accountNumber": "10008-4",
+    "agency": "0001",
+    "financialInstitution": "C6 Bank",
+    "color": "#212121",
+    "icon": "zap",
+    "isActive": true
+  },
+  {
+    "name": "Conta Empresarial Santander",
+    "description": "Conta corrente PJ para pagamentos de fornecedores",
+    "type": "CHECKING",
+    "accountNumber": "20009-6",
+    "agency": "1500",
+    "financialInstitution": "Santander Empresas",
+    "color": "#C62828",
+    "icon": "briefcase",
+    "isActive": true
+  }
+]

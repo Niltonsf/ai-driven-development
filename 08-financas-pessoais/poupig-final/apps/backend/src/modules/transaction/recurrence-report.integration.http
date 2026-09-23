@@ -1,0 +1,766 @@
+@baseUrl = http://localhost:4000
+@password = #Senha123
+
+# Roteiro executável em ordem (Rest Client). Cada execução registra dois usuários novos
+# (e-mails com {{$guid}}), então os valores abaixo valem para uma execução completa.
+# GET /reports/recurrences?reference=YYYY-MM&months=N devolve um array JSON, sem paginação e sem envelope,
+# com uma linha por recorrência (série "OPEN" não excluída):
+# [{ "seriesId": "<uuid>", "name": "...", "direction": "IN"|"OUT", "value": 0, "recurrence": { "unit": ... },
+#    "accountName": "...", "creditCardName": null, "categoryName": null, "subcategoryName": null,
+#    "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD"|null, "total": 0,
+#    "months": [{ "month": "YYYY-MM", "total": 0 }, ...] }, ...]
+# "months" tem exatamente N itens em ordem crescente terminando no mês de referência, com 0 no mês sem ocorrência.
+# Cada mês soma, pela data prevista: ocorrências gravadas pendentes e efetivadas (sem canceladas) e ocorrências
+# geradas ainda não gravadas, com o valor atual da série. Parcelamentos ("CLOSED") e avulsas não entram.
+# Toda recorrência vigente na janela aparece, mesmo zerada. Ordem: "IN" antes de "OUT" e, na direção, por nome.
+# "value" é o valor atual da série; os valores são números positivos com até duas casas.
+# Erros seguem o formato do ApiExceptionFilter:
+# { "statusCode": 400|401, "error": "...", "message": ["CODIGO", ...], "path": "...", "timestamp": "..." }
+#
+# Índices usados (séries mensais iniciadas em 2024-01-01, índice 0 em janeiro de 2024):
+# 2026-07 = índice 30, 2026-08 = índice 31, 2026-09 = índice 32.
+
+############################################################
+# Preparação — usuário A (dono do relatório)
+############################################################
+
+### POST /auth/register — registrar o usuário A (espera 201 Created)
+# @name registerA
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Usuario Recorrencias",
+  "email": "recorrencias.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário A (espera 200 OK com token)
+# @name loginA
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerA.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@token = {{loginA.response.body.$.token}}
+
+### POST /accounts — criar a conta do usuário A (espera 201 Created)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Conta Corrente",
+  "type": "CHECKING"
+}
+
+###
+
+### GET /accounts — capturar o id da conta do usuário A (espera 200 OK)
+# @name accountsA
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{token}}
+
+###
+
+@accountId = {{accountsA.response.body.$.items[0].id}}
+
+############################################################
+# Preparação — usuário B (tem recorrência na mesma janela)
+############################################################
+
+### POST /auth/register — registrar o usuário B (espera 201 Created)
+# @name registerB
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Outro Usuario",
+  "email": "outro.recorrencias.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário B (espera 200 OK)
+# @name loginB
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerB.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@tokenB = {{loginB.response.body.$.token}}
+
+### POST /accounts — criar a conta do usuário B (espera 201 Created)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+Authorization: Bearer {{tokenB}}
+
+{
+  "name": "Conta do Outro",
+  "type": "CASH"
+}
+
+###
+
+### GET /accounts — capturar o id da conta do usuário B (espera 200 OK)
+# @name accountsB
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{tokenB}}
+
+###
+
+@otherAccountId = {{accountsB.response.body.$.items[0].id}}
+
+### POST /transaction-series — recorrência mensal do usuário B, no dia 10, início 2026-01-01
+### (espera 201 Created com { "id": "<uuid>" })
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{tokenB}}
+
+{
+  "name": "Assinatura do Outro",
+  "value": 555,
+  "direction": "OUT",
+  "accountId": "{{otherAccountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 10,
+  "startDate": "2026-01-01"
+}
+
+###
+
+############################################################
+# Usuário sem recorrência
+############################################################
+
+### GET /reports/recurrences — usuário A recém-registrado, sem nenhuma série
+### (espera 200 OK com [] — a recorrência do usuário B não vaza)
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=12
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Recorrências mensais criadas sem nada gravado
+############################################################
+
+### POST /transaction-series — entrada mensal "Salario", dia 5, início 2024-01-01, sem fim
+### (espera 201 Created com { "id": "<uuid>" })
+# @name createSalary
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Salario",
+  "value": 5000,
+  "direction": "IN",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 5,
+  "startDate": "2024-01-01"
+}
+
+###
+
+@salaryId = {{createSalary.response.body.$.id}}
+
+### POST /transaction-series — saída mensal "Internet", dia 15, início 2024-01-01, sem fim
+### (criada antes de "Aluguel" para mostrar que a ordem é por nome, e não por criação)
+### (espera 201 Created com { "id": "<uuid>" })
+# @name createInternet
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Internet",
+  "value": 119.9,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 15,
+  "startDate": "2024-01-01"
+}
+
+###
+
+@internetId = {{createInternet.response.body.$.id}}
+
+### POST /transaction-series — saída mensal "Aluguel", dia 10, início 2024-01-01, sem fim
+### (espera 201 Created com { "id": "<uuid>" })
+# @name createRent
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Aluguel",
+  "value": 1800,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 10,
+  "startDate": "2024-01-01"
+}
+
+###
+
+@rentId = {{createRent.response.body.$.id}}
+
+### GET /reports/recurrences — janela de 6 meses: cada mês soma o valor da série sem nada gravado
+### (espera 200 OK com 3 linhas, a entrada primeiro e as saídas por nome:
+### [0] { "seriesId": "<salaryId>", "name": "Salario", "direction": "IN", "value": 5000,
+###       "recurrence": { "unit": "MONTH", "interval": 1, "dayOfMonth": 5 }, "accountName": "Conta Corrente",
+###       "creditCardName": null, "categoryName": null, "subcategoryName": null,
+###       "startDate": "2024-01-01", "endDate": null, "total": 30000,
+###       "months": 6 itens de "2026-04" a "2026-09", todos com "total": 5000 }
+### [1] { "seriesId": "<rentId>", "name": "Aluguel", "direction": "OUT", "value": 1800,
+###       "recurrence": { "unit": "MONTH", "interval": 1, "dayOfMonth": 10 }, "total": 10800,
+###       "months": 6 itens de "2026-04" a "2026-09", todos com "total": 1800 }
+### [2] { "seriesId": "<internetId>", "name": "Internet", "direction": "OUT", "value": 119.9,
+###       "recurrence": { "unit": "MONTH", "interval": 1, "dayOfMonth": 15 }, "total": 719.4,
+###       "months": 6 itens de "2026-04" a "2026-09", todos com "total": 119.9 }
+### nenhuma linha traz "userId", "accountId", "kind", "installments" ou datas de auditoria)
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=6
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/recurrences — janela de 24 meses
+### (espera 200 OK com as mesmas 3 linhas na mesma ordem, cada uma com 24 meses de "2024-10" a "2026-09":
+### [0] "Salario"  "total": 120000, todos os meses 5000;
+### [1] "Aluguel"  "total": 43200, todos os meses 1800;
+### [2] "Internet" "total": 2877.6, todos os meses 119.9;
+### "months"[0].month = "2024-10" e "months"[23].month = "2026-09")
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=24
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Recorrência semanal e recorrência anual fora da janela
+############################################################
+
+### POST /transaction-series — saída semanal "Feira", aos sábados (weekDay 6), início 2026-01-01, sem fim.
+### Sábados: 2026-04 = 4, 2026-05 = 5, 2026-06 = 4, 2026-07 = 4, 2026-08 = 5 (1, 8, 15, 22, 29),
+### 2026-09 = 4 (5, 12, 19, 26) (espera 201 Created com { "id": "<uuid>" })
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Feira",
+  "value": 50,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "WEEK",
+  "interval": 1,
+  "weekDay": 6,
+  "startDate": "2026-01-01"
+}
+
+###
+
+### POST /transaction-series — saída anual "Seguro do carro", 20 de novembro, início 2025-01-01, sem fim.
+### Ocorrências: 2025-11-20, 2026-11-20 — nenhuma entre 2026-04 e 2026-09
+### (espera 201 Created com { "id": "<uuid>" })
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Seguro do carro",
+  "value": 2400,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "YEAR",
+  "interval": 1,
+  "month": 11,
+  "dayOfMonth": 20,
+  "startDate": "2025-01-01"
+}
+
+###
+
+### GET /reports/recurrences — a semanal soma 4 ou 5 ocorrências por mês e a anual aparece zerada
+### (espera 200 OK com 5 linhas: "Salario", "Aluguel", "Feira", "Internet", "Seguro do carro";
+### "Salario", "Aluguel" e "Internet" iguais à consulta de 6 meses acima;
+### "Feira": "recurrence": { "unit": "WEEK", "interval": 1, "weekDay": 6 }, "value": 50, "total": 1300,
+###   months: "2026-04" 200, "2026-05" 250, "2026-06" 200, "2026-07" 200, "2026-08" 250, "2026-09" 200;
+### "Seguro do carro": "recurrence": { "unit": "YEAR", "interval": 1, "month": 11, "dayOfMonth": 20 },
+###   "value": 2400, "total": 0, os 6 meses com "total": 0)
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=6
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Parcelamento e transação avulsa ficam fora
+############################################################
+
+### POST /transaction-series — parcelamento "Celular parcelado", 10x no dia 20, início 2026-05-01.
+### Parcelas de 2026-05-20 a 2027-02-20 (espera 201 Created com { "id": "<uuid>" })
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Celular parcelado",
+  "value": 250.5,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "CLOSED",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 20,
+  "startDate": "2026-05-01",
+  "installments": 10
+}
+
+###
+
+### POST /transactions — saída avulsa "Mercado" em setembro (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Mercado",
+  "value": 300,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-09-12"
+}
+
+###
+
+### GET /reports/recurrences — nada muda
+### (espera 200 OK com as mesmas 5 linhas e os mesmos valores da consulta anterior;
+### nenhuma linha "Celular parcelado" e nenhum mês somando 250.5 ou 300)
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=6
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Recorrência com fim no meio da janela e recorrência que começa no meio
+############################################################
+
+### POST /transaction-series — saída mensal "Academia", dia 1, início 2024-01-01, fim 2026-06-30
+### (espera 201 Created com { "id": "<uuid>" })
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Academia",
+  "value": 99.9,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 1,
+  "startDate": "2024-01-01",
+  "endDate": "2026-06-30"
+}
+
+###
+
+### POST /transaction-series — saída mensal "Streaming", dia 20, início 2026-07-01, sem fim
+### (espera 201 Created com { "id": "<uuid>" })
+# @name createStreaming
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Streaming",
+  "value": 39.9,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 20,
+  "startDate": "2026-07-01"
+}
+
+###
+
+### GET /reports/recurrences — zerada depois do fim e zerada antes do início
+### (espera 200 OK com 7 linhas: "Salario", "Academia", "Aluguel", "Feira", "Internet", "Seguro do carro",
+### "Streaming"; as já existentes iguais à consulta anterior;
+### "Academia": "startDate": "2024-01-01", "endDate": "2026-06-30", "total": 299.7,
+###   months: "2026-04" 99.9, "2026-05" 99.9, "2026-06" 99.9, "2026-07" 0, "2026-08" 0, "2026-09" 0;
+### "Streaming": "startDate": "2026-07-01", "endDate": null, "total": 119.7,
+###   months: "2026-04" 0, "2026-05" 0, "2026-06" 0, "2026-07" 39.9, "2026-08" 39.9, "2026-09" 39.9)
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=6
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Ocorrência gravada com valor alterado
+############################################################
+
+### GET /scheduled-transactions/:rentId/32 — capturar o id efêmero do aluguel de setembro
+### (espera 200 OK com "materialized": false e "occurrenceOn": "2026-09-10")
+# @name rentSeptember
+GET {{baseUrl}}/scheduled-transactions/{{rentId}}/32
+Authorization: Bearer {{token}}
+
+###
+
+### PUT /scheduled-transactions/:rentId/32 — gravar o aluguel de setembro com valor 1950
+### (espera 200 OK com { "id": "<id do rentSeptember>" })
+PUT {{baseUrl}}/scheduled-transactions/{{rentId}}/32
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{rentSeptember.response.body.$.id}}",
+  "name": "Aluguel",
+  "value": 1950,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "status": "PENDING",
+  "expectedOn": "2026-09-10"
+}
+
+###
+
+### GET /reports/recurrences — setembro soma o valor gravado uma única vez (1950, e não 1950 + 1800)
+### (espera 200 OK com 7 linhas; "Aluguel": "value": 1800 (valor atual da série), "total": 10950,
+### months: "2026-04" a "2026-08" 1800, "2026-09" 1950; as demais linhas iguais à consulta anterior)
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=6
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Ocorrência gravada efetivada
+############################################################
+
+### GET /scheduled-transactions/:salaryId/31 — capturar o id efêmero do salário de agosto
+### (espera 200 OK com "materialized": false e "occurrenceOn": "2026-08-05")
+# @name salaryAugust
+GET {{baseUrl}}/scheduled-transactions/{{salaryId}}/31
+Authorization: Bearer {{token}}
+
+###
+
+### PUT /scheduled-transactions/:salaryId/31 — efetivar o salário de agosto com valor 5250
+### (espera 200 OK com { "id": "<id do salaryAugust>" })
+PUT {{baseUrl}}/scheduled-transactions/{{salaryId}}/31
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{salaryAugust.response.body.$.id}}",
+  "name": "Salario",
+  "value": 5250,
+  "direction": "IN",
+  "accountId": "{{accountId}}",
+  "status": "SETTLED",
+  "expectedOn": "2026-08-05",
+  "settledOn": "2026-08-05"
+}
+
+###
+
+### GET /reports/recurrences — a efetivada entra com o valor gravado
+### (espera 200 OK com 7 linhas; "Salario": "total": 30250,
+### months: "2026-04" a "2026-07" 5000, "2026-08" 5250, "2026-09" 5000; as demais iguais à consulta anterior)
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=6
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Ocorrência gravada cancelada
+############################################################
+
+### GET /scheduled-transactions/:internetId/30 — capturar o id efêmero da internet de julho
+### (espera 200 OK com "materialized": false e "occurrenceOn": "2026-07-15")
+# @name internetJuly
+GET {{baseUrl}}/scheduled-transactions/{{internetId}}/30
+Authorization: Bearer {{token}}
+
+###
+
+### PUT /scheduled-transactions/:internetId/30 — gravar a internet de julho já cancelada
+### (espera 200 OK com { "id": "<id do internetJuly>" })
+PUT {{baseUrl}}/scheduled-transactions/{{internetId}}/30
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{internetJuly.response.body.$.id}}",
+  "name": "Internet",
+  "value": 119.9,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "status": "CANCELED",
+  "expectedOn": "2026-07-15"
+}
+
+###
+
+### GET /reports/recurrences — a cancelada não soma e não reaparece gerada como pendente
+### (espera 200 OK com 7 linhas; "Internet": "total": 599.5,
+### months: "2026-04" 119.9, "2026-05" 119.9, "2026-06" 119.9, "2026-07" 0, "2026-08" 119.9, "2026-09" 119.9;
+### as demais iguais à consulta anterior)
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=6
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Ocorrência movida para o mês seguinte (último dia do mês)
+############################################################
+
+### GET /scheduled-transactions/:internetId/31 — capturar o id efêmero da internet de agosto
+### (espera 200 OK com "materialized": false e "occurrenceOn": "2026-08-15")
+# @name internetAugust
+GET {{baseUrl}}/scheduled-transactions/{{internetId}}/31
+Authorization: Bearer {{token}}
+
+###
+
+### PUT /scheduled-transactions/:internetId/31 — mover de 2026-08-15 para 2026-09-30
+### (espera 200 OK com { "id": "<id do internetAugust>" })
+PUT {{baseUrl}}/scheduled-transactions/{{internetId}}/31
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{internetAugust.response.body.$.id}}",
+  "name": "Internet",
+  "value": 119.9,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-09-30"
+}
+
+###
+
+### GET /reports/recurrences — agosto perde a ocorrência (não é regerada) e setembro soma a movida
+### (no último dia do mês, sem cair em outubro) mais a de setembro gerada
+### (espera 200 OK com 7 linhas; "Internet": "total": 599.5,
+### months: "2026-04" 119.9, "2026-05" 119.9, "2026-06" 119.9, "2026-07" 0, "2026-08" 0, "2026-09" 239.8;
+### as demais iguais à consulta anterior)
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=6
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Ocorrência revertida volta a ser gerada
+############################################################
+
+### DELETE /scheduled-transactions/:rentId/32 — reverter o aluguel de setembro (espera 200 OK com { "success": true })
+DELETE {{baseUrl}}/scheduled-transactions/{{rentId}}/32
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/recurrences — setembro volta a somar o valor da série
+### (espera 200 OK com 7 linhas, nesta ordem e com estes valores de "2026-04" a "2026-09":
+### [0] "Salario"         IN  "total": 30250  months: 5000, 5000, 5000, 5000, 5250, 5000
+### [1] "Academia"        OUT "total": 299.7  months: 99.9, 99.9, 99.9, 0, 0, 0
+### [2] "Aluguel"         OUT "total": 10800  months: 1800, 1800, 1800, 1800, 1800, 1800
+### [3] "Feira"           OUT "total": 1300   months: 200, 250, 200, 200, 250, 200
+### [4] "Internet"        OUT "total": 599.5  months: 119.9, 119.9, 119.9, 0, 0, 239.8
+### [5] "Seguro do carro" OUT "total": 0      months: 0, 0, 0, 0, 0, 0
+### [6] "Streaming"       OUT "total": 119.7  months: 0, 0, 0, 39.9, 39.9, 39.9)
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=6
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Comparação com o extrato
+############################################################
+
+### GET /statement — setembro
+### (espera 200 OK com "meta.total": 11:
+### séries "OPEN" não canceladas: "Salario" IN 5000 (09-05); "Aluguel" OUT 1800 (09-10);
+###   "Internet" OUT 119.9 "occurrenceIndex": 32 (09-15) e OUT 119.9 "occurrenceIndex": 31 (09-30, movida);
+###   "Feira" OUT 50 em 09-05, 09-12, 09-19 e 09-26; "Streaming" OUT 39.9 (09-20);
+### fora do relatório: "Celular parcelado" ("seriesKind": "CLOSED", 250.5, 09-20) e "Mercado" ("kind": "TRANSACTION").
+### Somando só as séries "OPEN" não canceladas: entradas 5000 e saídas 2279.7 (1800 + 239.8 + 200 + 39.9) —
+### iguais à soma de "2026-09" no relatório acima: IN 5000; OUT 0 + 1800 + 200 + 239.8 + 0 + 39.9 = 2279.7)
+GET {{baseUrl}}/statement?from=2026-09-01&to=2026-09-30
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement — julho
+### (espera 200 OK com "meta.total": 9:
+### séries "OPEN": "Salario" IN 5000; "Aluguel" OUT 1800; "Feira" OUT 50 em 07-04, 07-11, 07-18 e 07-25;
+###   "Streaming" OUT 39.9; "Internet" OUT 119.9 com "status": "CANCELED" (não soma);
+### fora do relatório: "Celular parcelado" ("seriesKind": "CLOSED", 250.5, 07-20).
+### Somando só as séries "OPEN" não canceladas: entradas 5000 e saídas 2039.9 (1800 + 200 + 39.9) —
+### iguais à soma de "2026-07" no relatório acima: IN 5000; OUT 0 + 1800 + 200 + 0 + 0 + 39.9 = 2039.9)
+GET {{baseUrl}}/statement?from=2026-07-01&to=2026-07-31
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Ocorrência movida para o primeiro dia do mês seguinte
+############################################################
+
+### GET /scheduled-transactions/:salaryId/32 — capturar o id efêmero do salário de setembro
+### (espera 200 OK com "materialized": false e "occurrenceOn": "2026-09-05")
+# @name salarySeptember
+GET {{baseUrl}}/scheduled-transactions/{{salaryId}}/32
+Authorization: Bearer {{token}}
+
+###
+
+### PUT /scheduled-transactions/:salaryId/32 — mover de 2026-09-05 para 2026-10-01
+### (espera 200 OK com { "id": "<id do salarySeptember>" })
+PUT {{baseUrl}}/scheduled-transactions/{{salaryId}}/32
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{salarySeptember.response.body.$.id}}",
+  "name": "Salario",
+  "value": 5000,
+  "direction": "IN",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-10-01"
+}
+
+###
+
+### GET /reports/recurrences — referência 2026-09: a movida saiu da janela e não é regerada em setembro
+### (espera 200 OK com 7 linhas; "Salario": "total": 25250,
+### months: "2026-04" a "2026-07" 5000, "2026-08" 5250, "2026-09" 0)
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=6
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/recurrences — referência 2026-10: a movida cai em outubro, e não em setembro
+### (espera 200 OK com 7 linhas e 6 meses de "2026-05" a "2026-10"; "Salario": "total": 30250,
+### months: "2026-05" 5000, "2026-06" 5000, "2026-07" 5000, "2026-08" 5250, "2026-09" 0,
+### "2026-10" 10000 — a movida (5000) mais a de outubro gerada (5000))
+GET {{baseUrl}}/reports/recurrences?reference=2026-10&months=6
+Authorization: Bearer {{token}}
+
+###
+
+### DELETE /scheduled-transactions/:salaryId/32 — reverter o salário de setembro (espera 200 OK com { "success": true })
+DELETE {{baseUrl}}/scheduled-transactions/{{salaryId}}/32
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Série excluída
+############################################################
+
+### DELETE /transaction-series/:internetId — exclusão lógica da "Internet", que tem ocorrências gravadas
+### (a cancelada de julho e a movida para 2026-09-30) (espera 200 OK com { "success": true })
+DELETE {{baseUrl}}/transaction-series/{{internetId}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/recurrences — nem as gravadas nem as geradas da série excluída entram
+### (espera 200 OK com 6 linhas: "Salario", "Academia", "Aluguel", "Feira", "Seguro do carro", "Streaming";
+### nenhuma linha "Internet"; "Salario" de volta a "total": 30250 com "2026-09" 5000;
+### as demais iguais à consulta depois da reversão do aluguel)
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=6
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Dados de outro usuário
+############################################################
+
+### GET /reports/recurrences — o relatório de A não traz a recorrência do usuário B
+### (espera 200 OK com as mesmas 6 linhas da consulta anterior; nenhuma "Assinatura do Outro" e nenhum mês com 555)
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=6
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/recurrences — o relatório de B só enxerga a recorrência de B
+### (espera 200 OK com 1 linha: { "name": "Assinatura do Outro", "direction": "OUT", "value": 555,
+### "accountName": "Conta do Outro", "startDate": "2026-01-01", "endDate": null, "total": 3330,
+### "months": 6 itens de "2026-04" a "2026-09", todos com "total": 555 })
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=6
+Authorization: Bearer {{tokenB}}
+
+###
+
+############################################################
+# Janela e referência inválidas
+############################################################
+
+### GET /reports/recurrences com months=7 (espera 400 com "message": ["INVALID_REPORT_WINDOW"])
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=7
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/recurrences com months=0 (espera 400 com "message": ["INVALID_REPORT_WINDOW"])
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=0
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/recurrences sem months (espera 400 com "message": ["INVALID_REPORT_WINDOW"])
+GET {{baseUrl}}/reports/recurrences?reference=2026-09
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/recurrences sem reference (espera 400 com "message": ["INVALID_REPORT_REFERENCE"])
+GET {{baseUrl}}/reports/recurrences?months=12
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/recurrences com reference=2026-13 (espera 400 com "message": ["INVALID_REPORT_REFERENCE"])
+GET {{baseUrl}}/reports/recurrences?reference=2026-13&months=12
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Sem token
+############################################################
+
+### GET /reports/recurrences sem token (espera 401 Unauthorized)
+GET {{baseUrl}}/reports/recurrences?reference=2026-09&months=12

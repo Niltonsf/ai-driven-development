@@ -1,0 +1,661 @@
+@baseUrl = http://localhost:4000
+@password = #Senha123
+
+# Roteiro executável em ordem (Rest Client). Cada execução registra dois usuários novos
+# (e-mails com {{$guid}}), então as contagens de `meta` abaixo valem para uma execução completa.
+# Erros seguem o formato do ApiExceptionFilter:
+# { "statusCode": 400|404, "error": "...", "message": ["CODIGO", ...], "path": "...", "timestamp": "..." }
+
+############################################################
+# Preparação — usuário A (dono das séries)
+############################################################
+
+### POST /auth/register — registrar o usuário A (espera 201 Created)
+# @name registerA
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Usuario Series",
+  "email": "series.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário A (espera 200 OK com token)
+# @name loginA
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerA.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@token = {{loginA.response.body.$.token}}
+
+### POST /accounts — criar a conta do usuário A (espera 201 Created)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Conta Corrente",
+  "type": "CHECKING"
+}
+
+###
+
+### GET /accounts — capturar o id da conta do usuário A (espera 200 OK)
+# @name accountsA
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{token}}
+
+###
+
+@accountId = {{accountsA.response.body.$.items[0].id}}
+
+### POST /cards — criar o cartão do usuário A (espera 201 Created)
+POST {{baseUrl}}/cards
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Cartao Principal",
+  "brand": "VISA",
+  "closingDay": 5,
+  "dueDay": 12
+}
+
+###
+
+### GET /cards — capturar o id do cartão do usuário A (espera 200 OK)
+# @name cardsA
+GET {{baseUrl}}/cards
+Authorization: Bearer {{token}}
+
+###
+
+@creditCardId = {{cardsA.response.body.$.items[0].id}}
+
+### POST /categories/default — aplicar as categorias padrão do usuário A (espera 201 Created)
+POST {{baseUrl}}/categories/default
+Authorization: Bearer {{token}}
+
+###
+
+### GET /categories — capturar uma subcategoria do usuário A (espera 200 OK)
+# @name categoriesA
+GET {{baseUrl}}/categories
+Authorization: Bearer {{token}}
+
+###
+
+@subcategoryId = {{categoriesA.response.body.$[0].subcategories[0].id}}
+
+############################################################
+# Preparação — usuário B (dono da conta usada no teste de posse)
+############################################################
+
+### POST /auth/register — registrar o usuário B (espera 201 Created)
+# @name registerB
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Outro Usuario",
+  "email": "outro.series.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário B (espera 200 OK)
+# @name loginB
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerB.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@tokenB = {{loginB.response.body.$.token}}
+
+### POST /accounts — criar a conta do usuário B (espera 201 Created)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+Authorization: Bearer {{tokenB}}
+
+{
+  "name": "Conta do Outro",
+  "type": "CASH"
+}
+
+###
+
+### GET /accounts — capturar o id da conta do usuário B (espera 200 OK)
+# @name accountsB
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{tokenB}}
+
+###
+
+@otherAccountId = {{accountsB.response.body.$.items[0].id}}
+
+############################################################
+# Criar
+############################################################
+
+### POST /transaction-series — parcelamento mensal de 12 com todos os vínculos.
+### A "endDate" do corpo é ignorada: a primeira ocorrência é 2026-10-10 (o dia 10 de setembro
+### já passou) e a 12ª parcela cai em 2027-09-10 (espera 201 Created com { "id": "<uuid>" })
+# @name createInstallment
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Notebook parcelado",
+  "note": "12x sem juros",
+  "value": 250.5,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "creditCardId": "{{creditCardId}}",
+  "subcategoryId": "{{subcategoryId}}",
+  "kind": "CLOSED",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 10,
+  "startDate": "2026-09-15",
+  "endDate": "2030-01-01",
+  "installments": 12
+}
+
+###
+
+@seriesId = {{createInstallment.response.body.$.id}}
+
+### GET /transaction-series/:id — a data fim calculada ignora a do corpo
+### (espera 200 OK com "endDate": "2027-09-10", "installments": 12, "value": 250.5 (número),
+### "startDate": "2026-09-15" e "recurrence": { "unit": "MONTH", "interval": 1, "dayOfMonth": 10 })
+GET {{baseUrl}}/transaction-series/{{seriesId}}
+Authorization: Bearer {{token}}
+
+###
+
+### POST /transaction-series — recorrência semanal sem fim; o "installments" enviado é descartado
+### (espera 201 Created; a busca devolve "endDate": null e "installments": null)
+# @name createWeekly
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Feira semanal",
+  "value": 180,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "WEEK",
+  "interval": 1,
+  "weekDay": 5,
+  "startDate": "2026-09-01",
+  "installments": 3
+}
+
+###
+
+### GET /transaction-series/:id — recorrência sem fim
+### (espera 200 OK com "endDate": null, "installments": null, "creditCardId": null,
+### "creditCardName": null e "recurrence": { "unit": "WEEK", "interval": 1, "weekDay": 5 })
+GET {{baseUrl}}/transaction-series/{{createWeekly.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+
+### POST /transaction-series — recorrência trimestral (mensal a cada 3) (espera 201 Created)
+# @name createQuarterly
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Seguro trimestral",
+  "value": 420,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 3,
+  "dayOfMonth": 5,
+  "startDate": "2026-09-20"
+}
+
+###
+
+### GET /transaction-series/:id — a regra trimestral volta sem âncoras de outra unidade
+### (espera 200 OK com "recurrence": { "unit": "MONTH", "interval": 3, "dayOfMonth": 5 }, sem "weekDay")
+GET {{baseUrl}}/transaction-series/{{createQuarterly.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+
+### POST /transaction-series — recorrência anual (espera 201 Created)
+# @name createYearly
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "IPVA",
+  "value": 1200,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "YEAR",
+  "interval": 1,
+  "month": 3,
+  "dayOfMonth": 10,
+  "startDate": "2026-01-05"
+}
+
+###
+
+### GET /transaction-series/:id — a regra anual traz mês e dia, sem "weekDay"
+### (espera 200 OK com "recurrence": { "unit": "YEAR", "interval": 1, "month": 3, "dayOfMonth": 10 })
+GET {{baseUrl}}/transaction-series/{{createYearly.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+
+### POST /transaction-series — números enviados como string (espera 201 Created)
+# @name createStringNumbers
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Curso parcelado",
+  "value": "89.90",
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "CLOSED",
+  "unit": "MONTH",
+  "interval": "1",
+  "dayOfMonth": "10",
+  "startDate": "2026-09-15",
+  "installments": "12"
+}
+
+###
+
+### GET /transaction-series/:id — as strings viraram números
+### (espera 200 OK com "value": 89.9, "installments": 12, "endDate": "2027-09-10"
+### e "recurrence": { "unit": "MONTH", "interval": 1, "dayOfMonth": 10 })
+GET {{baseUrl}}/transaction-series/{{createStringNumbers.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+
+### POST /transaction-series — `id` e `userId` do corpo são ignorados
+### (espera 201 Created com um id novo, dono = usuário A)
+# @name createSubscription
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "00000000-0000-4000-8000-000000000001",
+  "userId": "{{loginB.response.body.$.user.id}}",
+  "name": "Assinatura",
+  "value": 49.9,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 1,
+  "startDate": "2026-10-01"
+}
+
+###
+
+### GET /transaction-series/:id — a série do corpo com userId de B pertence ao usuário A
+### (espera 200 OK, com id diferente de 00000000-0000-4000-8000-000000000001)
+GET {{baseUrl}}/transaction-series/{{createSubscription.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Atualizar
+############################################################
+
+### PUT /transaction-series/:id — reduzir para 6 parcelas, mantendo os demais campos
+### (espera 200 OK com { "id": "<mesmo id da rota>" })
+PUT {{baseUrl}}/transaction-series/{{seriesId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Notebook parcelado",
+  "note": null,
+  "value": 250.5,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "creditCardId": "{{creditCardId}}",
+  "subcategoryId": "{{subcategoryId}}",
+  "kind": "CLOSED",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 10,
+  "startDate": "2026-09-15",
+  "installments": 6
+}
+
+###
+
+### GET /transaction-series/:id — a data fim foi recalculada pela 6ª parcela
+### (espera 200 OK com "endDate": "2027-03-10", "installments": 6 e "note": null)
+GET {{baseUrl}}/transaction-series/{{seriesId}}
+Authorization: Bearer {{token}}
+
+###
+
+### PUT /transaction-series/:id — id inexistente
+### (espera 404 com "message": ["TRANSACTION_SERIES_NOT_FOUND"], sem criar registro)
+PUT {{baseUrl}}/transaction-series/00000000-0000-4000-8000-000000000000
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Não existe",
+  "value": 10,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 5,
+  "startDate": "2026-09-01"
+}
+
+###
+
+############################################################
+# Buscar por id
+############################################################
+
+### GET /transaction-series/:id — DTO completo com os nomes de vínculo resolvidos
+### (espera 200 OK com accountName/creditCardName/subcategoryName/categoryName preenchidos e sem deletedAt)
+GET {{baseUrl}}/transaction-series/{{seriesId}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transaction-series/:id — série de outro usuário
+### (espera 404 com "message": ["TRANSACTION_SERIES_NOT_FOUND"])
+GET {{baseUrl}}/transaction-series/{{seriesId}}
+Authorization: Bearer {{tokenB}}
+
+###
+
+############################################################
+# Listar
+############################################################
+
+### GET /transaction-series — página 1, ordenada por startDate desc e, no empate, createdAt desc
+### (espera 200 OK: 4 itens — Assinatura (2026-10-01), Seguro trimestral (2026-09-20),
+### Curso parcelado (2026-09-15), Notebook parcelado (2026-09-15) — e
+### "meta": { "page": 1, "pageSize": 4, "total": 6, "totalPages": 2 })
+GET {{baseUrl}}/transaction-series?page=1&pageSize=4
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transaction-series — página 2
+### (espera 200 OK: 2 itens — Feira semanal (2026-09-01), IPVA (2026-01-05) — e
+### "meta": { "page": 2, "pageSize": 4, "total": 6, "totalPages": 2 })
+GET {{baseUrl}}/transaction-series?page=2&pageSize=4
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transaction-series — teto de pageSize e page inválida normalizada para 1
+### (espera 200 OK com "meta.page": 1 e "meta.pageSize": 50)
+GET {{baseUrl}}/transaction-series?page=0&pageSize=500
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transaction-series — filtro por tipo
+### (espera 200 OK só com os parcelamentos: Curso parcelado e Notebook parcelado)
+GET {{baseUrl}}/transaction-series?kind=CLOSED
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transaction-series — busca parcial sem diferenciar maiúsculas
+### (espera 200 OK só com "Seguro trimestral")
+GET {{baseUrl}}/transaction-series?search=SEGU
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transaction-series — filtro por direção e por conta (espera 200 OK com os 6 itens do usuário A)
+GET {{baseUrl}}/transaction-series?direction=OUT&accountId={{accountId}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transaction-series — tipo fora do conjunto (espera 400 com "message": ["INVALID_SERIES_KIND"])
+GET {{baseUrl}}/transaction-series?kind=INSTALLMENT
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transaction-series — direção fora do conjunto (espera 400 com "message": ["INVALID_DIRECTION"])
+GET {{baseUrl}}/transaction-series?direction=INFLOW
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transaction-series — o usuário B não enxerga as séries do usuário A
+### (espera 200 OK com "data": [] e "meta.total": 0)
+GET {{baseUrl}}/transaction-series
+Authorization: Bearer {{tokenB}}
+
+###
+
+############################################################
+# Falhas de validação
+############################################################
+
+### POST /transaction-series — parcelamento sem parcelas
+### (espera 400 com "message": ["TRANSACTION_SERIES_INSTALLMENTS_REQUIRED"])
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Sem parcelas",
+  "value": 100,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "CLOSED",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 10,
+  "startDate": "2026-09-15"
+}
+
+###
+
+### POST /transaction-series — âncora faltando para a unidade escolhida
+### (espera 400 com "message": ["INVALID_RECURRENCE_DAY_OF_MONTH"])
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Mensal sem dia",
+  "value": 100,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "startDate": "2026-09-15"
+}
+
+###
+
+### POST /transaction-series — número não numérico
+### (espera 400 com "message": ["INVALID_RECURRENCE_INTERVAL"]; nada é gravado)
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Intervalo invalido",
+  "value": 100,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": "abc",
+  "dayOfMonth": 10,
+  "startDate": "2026-09-15"
+}
+
+###
+
+### POST /transaction-series — data fim anterior à primeira ocorrência
+### (espera 400 com "message": ["TRANSACTION_SERIES_END_DATE_BEFORE_START"])
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Fim antes do inicio",
+  "value": 100,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 10,
+  "startDate": "2026-09-15",
+  "endDate": "2026-09-20"
+}
+
+###
+
+### POST /transaction-series — conta de outro usuário
+### (espera 400 com "message": ["TRANSACTION_SERIES_ACCOUNT_NOT_FOUND"])
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Conta alheia",
+  "value": 100,
+  "direction": "OUT",
+  "accountId": "{{otherAccountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 10,
+  "startDate": "2026-09-15"
+}
+
+###
+
+############################################################
+# Excluir
+############################################################
+
+### DELETE /transaction-series/:id — excluir logicamente o IPVA (espera 200 OK com { "success": true })
+DELETE {{baseUrl}}/transaction-series/{{createYearly.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transaction-series/:id — buscar a excluída
+### (espera 404 com "message": ["TRANSACTION_SERIES_NOT_FOUND"])
+GET {{baseUrl}}/transaction-series/{{createYearly.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+
+### DELETE /transaction-series/:id — excluir de novo
+### (espera 404 com "message": ["TRANSACTION_SERIES_NOT_FOUND"])
+DELETE {{baseUrl}}/transaction-series/{{createYearly.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transaction-series — a excluída some da lista (espera 200 OK com "meta.total": 5)
+GET {{baseUrl}}/transaction-series
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Sem autenticação
+############################################################
+
+### GET /transaction-series sem token (espera 401 Unauthorized)
+GET {{baseUrl}}/transaction-series
+
+###
+
+### POST /transaction-series sem token (espera 401 Unauthorized)
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+
+{
+  "name": "Sem auth",
+  "value": 10,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 10,
+  "startDate": "2026-09-01"
+}
+
+###
+
+### GET /transaction-series/:id sem token (espera 401 Unauthorized)
+GET {{baseUrl}}/transaction-series/{{seriesId}}
+
+###
+
+### PUT /transaction-series/:id sem token (espera 401 Unauthorized)
+PUT {{baseUrl}}/transaction-series/{{seriesId}}
+Content-Type: application/json
+
+{
+  "name": "Sem auth",
+  "value": 10,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 10,
+  "startDate": "2026-09-01"
+}
+
+###
+
+### DELETE /transaction-series/:id sem token (espera 401 Unauthorized)
+DELETE {{baseUrl}}/transaction-series/{{seriesId}}

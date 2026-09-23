@@ -1,0 +1,36 @@
+// Prisma models for module: credit-card
+
+enum CardBrand {
+  VISA
+  MASTERCARD
+  ELO
+  AMEX
+  HIPERCARD
+  DINERS
+  OTHER
+}
+
+model Card {
+  id             String    @id
+  userId         String    @map("user_id")
+  name           String
+  description    String?
+  brand          CardBrand
+  lastFourDigits String?   @map("last_four_digits")
+  closingDay     Int       @map("closing_day")
+  dueDay         Int       @map("due_day")
+  limit          Int?
+  color          String?
+  icon           String?
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  transactionSeries TransactionSeries[]
+  scheduledTransactions ScheduledTransaction[]
+
+  @@map("card")
+}

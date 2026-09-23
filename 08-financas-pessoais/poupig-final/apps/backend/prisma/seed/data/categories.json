@@ -1,0 +1,77 @@
+[
+  {
+    "name": "Alimentação",
+    "icon": "utensils",
+    "color": "#FB8C00",
+    "isActive": true,
+    "subcategories": [
+      { "name": "Supermercado", "icon": "shopping-cart", "color": "#FB8C00", "isActive": true, "order": 1 },
+      { "name": "Restaurantes", "icon": "utensils", "color": "#FFA726", "isActive": true, "order": 2 },
+      { "name": "Delivery", "icon": "bike", "color": "#FFB74D", "isActive": true, "order": 3 }
+    ]
+  },
+  {
+    "name": "Moradia",
+    "icon": "home",
+    "color": "#43A047",
+    "isActive": true,
+    "subcategories": [
+      { "name": "Aluguel", "icon": "key", "color": "#43A047", "isActive": true, "order": 1 },
+      { "name": "Condomínio", "icon": "building", "color": "#66BB6A", "isActive": true, "order": 2 },
+      { "name": "Energia Elétrica", "icon": "zap", "color": "#81C784", "isActive": true, "order": 3 },
+      { "name": "Água", "icon": "droplet", "color": "#4CAF50", "isActive": true, "order": 4 }
+    ]
+  },
+  {
+    "name": "Transporte",
+    "icon": "car",
+    "color": "#1E88E5",
+    "isActive": true,
+    "subcategories": [
+      { "name": "Combustível", "icon": "fuel", "color": "#1E88E5", "isActive": true, "order": 1 },
+      { "name": "Transporte Público", "icon": "bus", "color": "#42A5F5", "isActive": true, "order": 2 },
+      { "name": "Aplicativos de Transporte", "icon": "car-taxi-front", "color": "#64B5F6", "isActive": true, "order": 3 }
+    ]
+  },
+  {
+    "name": "Saúde",
+    "icon": "heart-pulse",
+    "color": "#E53935",
+    "isActive": true,
+    "subcategories": [
+      { "name": "Plano de Saúde", "icon": "shield-plus", "color": "#E53935", "isActive": true, "order": 1 },
+      { "name": "Farmácia", "icon": "pill", "color": "#EF5350", "isActive": true, "order": 2 },
+      { "name": "Consultas Médicas", "icon": "stethoscope", "color": "#E57373", "isActive": true, "order": 3 }
+    ]
+  },
+  {
+    "name": "Lazer",
+    "icon": "party-popper",
+    "color": "#8E24AA",
+    "isActive": true,
+    "subcategories": [
+      { "name": "Cinema e Streaming", "icon": "clapperboard", "color": "#8E24AA", "isActive": true, "order": 1 },
+      { "name": "Viagens", "icon": "plane", "color": "#AB47BC", "isActive": true, "order": 2 }
+    ]
+  },
+  {
+    "name": "Educação",
+    "icon": "graduation-cap",
+    "color": "#3949AB",
+    "isActive": true,
+    "subcategories": [
+      { "name": "Cursos", "icon": "book-open", "color": "#3949AB", "isActive": true, "order": 1 },
+      { "name": "Material Escolar", "icon": "pencil", "color": "#5C6BC0", "isActive": true, "order": 2 }
+    ]
+  },
+  {
+    "name": "Assinaturas Antigas",
+    "icon": "archive",
+    "color": "#757575",
+    "isActive": false,
+    "subcategories": [
+      { "name": "Revistas", "icon": "newspaper", "color": "#757575", "isActive": false, "order": 1 },
+      { "name": "TV a Cabo", "icon": "tv", "color": "#9E9E9E", "isActive": false, "order": 2 }
+    ]
+  }
+]

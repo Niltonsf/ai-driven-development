@@ -1,0 +1,100 @@
+@baseUrl = http://localhost:4000
+
+# Obtenha um token via POST /auth/login e cole abaixo
+@token = SEU_TOKEN_AQUI
+
+### GET /cards — listar cartões com paginação padrão (espera 200 OK)
+GET {{baseUrl}}/cards
+Authorization: Bearer {{token}}
+
+###
+
+### GET /cards — listar cartões com paginação explícita (espera 200 OK)
+GET {{baseUrl}}/cards?page=1&pageSize=10
+Authorization: Bearer {{token}}
+
+###
+
+### GET /cards — listar cartões página 2 (espera 200 OK)
+GET {{baseUrl}}/cards?page=2&pageSize=10
+Authorization: Bearer {{token}}
+
+###
+
+### GET /cards — pageSize > 50 (espera 400 Bad Request)
+GET {{baseUrl}}/cards?pageSize=51
+Authorization: Bearer {{token}}
+
+###
+
+### POST /cards — criar novo cartão (espera 201 Created)
+POST {{baseUrl}}/cards
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Cartão Teste",
+  "brand": "VISA",
+  "lastFourDigits": "1234",
+  "closingDay": 5,
+  "dueDay": 12,
+  "limit": 500000,
+  "color": "#8A05BE",
+  "icon": "credit-card"
+}
+
+###
+
+### POST /cards — criar com nome duplicado (espera 400 Bad Request)
+POST {{baseUrl}}/cards
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Cartão Teste",
+  "brand": "MASTERCARD",
+  "closingDay": 10,
+  "dueDay": 17
+}
+
+###
+
+### PUT /cards/:id — atualizar cartão (substitua :id pelo id retornado no GET)
+PUT {{baseUrl}}/cards/SUBSTITUA_PELO_ID
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Cartão Teste Atualizado",
+  "brand": "VISA",
+  "lastFourDigits": "5678",
+  "closingDay": 8,
+  "dueDay": 15,
+  "limit": 750000,
+  "color": "#336699",
+  "isActive": true
+}
+
+###
+
+### DELETE /cards/:id — excluir cartão (substitua :id pelo id retornado no GET)
+DELETE {{baseUrl}}/cards/SUBSTITUA_PELO_ID
+Authorization: Bearer {{token}}
+
+###
+
+### GET /cards sem token (espera 401 Unauthorized)
+GET {{baseUrl}}/cards
+
+###
+
+### POST /cards sem token (espera 401 Unauthorized)
+POST {{baseUrl}}/cards
+Content-Type: application/json
+
+{
+  "name": "Sem auth",
+  "brand": "VISA",
+  "closingDay": 5,
+  "dueDay": 10
+}

@@ -1,0 +1,953 @@
+@baseUrl = http://localhost:4000
+@password = #Senha123
+
+# Roteiro executável em ordem (Rest Client). Cada execução registra dois usuários novos
+# (e-mails com {{$guid}}), então os valores abaixo valem para uma execução completa.
+# GET /reports/categories?from=YYYY-MM-DD&to=YYYY-MM-DD devolve um array JSON, sem paginação e sem envelope,
+# com um item por subcategoria que teve saída no período (datas inclusivas):
+# [{ "categoryId", "categoryName", "categoryColor", "categoryIcon",
+#    "subcategoryId", "subcategoryName", "subcategoryColor", "subcategoryIcon", "total" }, ...]
+# ordenado por "total" decrescente (no empate: nome da categoria, nome da subcategoria e o item sem
+# classificação por último). Cada item soma, pela data prevista, só saídas pendentes e efetivadas:
+# avulsas não excluídas, ocorrências gravadas de séries não excluídas e ocorrências geradas das séries
+# ativas ainda não gravadas. Saídas sem subcategoria (ou cuja subcategoria não existe mais) somam num único
+# item com todos os campos de identidade e aparência null. Os valores são números com até duas casas.
+# Nas listas esperadas abaixo, cada item aparece abreviado como "Categoria / Subcategoria: total";
+# "(sem classificação)" é o item de campos null.
+# Erros seguem o formato do ApiExceptionFilter:
+# { "statusCode": 400|401, "error": "...", "message": ["CODIGO", ...], "path": "...", "timestamp": "..." }
+
+############################################################
+# Preparação — usuário A (dono do relatório)
+############################################################
+
+### POST /auth/register — registrar o usuário A (espera 201 Created)
+# @name registerA
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Usuario Gastos",
+  "email": "gastos.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário A (espera 200 OK com token)
+# @name loginA
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerA.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@token = {{loginA.response.body.$.token}}
+
+### GET /reports/categories — usuário recém-registrado, setembro de 2026 (espera 200 OK com [])
+GET {{baseUrl}}/reports/categories?from=2026-09-01&to=2026-09-30
+Authorization: Bearer {{token}}
+
+###
+
+### POST /accounts — criar a conta do usuário A (espera 201 Created)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Conta Corrente",
+  "type": "CHECKING"
+}
+
+###
+
+### GET /accounts — capturar o id da conta do usuário A (espera 200 OK)
+# @name accountsA
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{token}}
+
+###
+
+@accountId = {{accountsA.response.body.$.items[0].id}}
+
+### POST /categories — "Moradia" com "Aluguel" e "Energia" (espera 201 Created com { "success": true })
+POST {{baseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Moradia",
+  "icon": "home",
+  "color": "#4A90D9",
+  "subcategories": [
+    { "name": "Aluguel", "icon": "building", "color": "#4A90D9", "order": 1 },
+    { "name": "Energia", "icon": "zap", "color": "#4A90D9", "order": 2 }
+  ]
+}
+
+###
+
+### POST /categories — "Alimentação" com "Supermercado" e "Restaurantes" (espera 201 Created)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Alimentação",
+  "icon": "utensils",
+  "color": "#F5A623",
+  "subcategories": [
+    { "name": "Supermercado", "icon": "shopping-cart", "color": "#F5A623", "order": 1 },
+    { "name": "Restaurantes", "icon": "utensils-crossed", "color": "#F5A623", "order": 2 }
+  ]
+}
+
+###
+
+### POST /categories — "Lazer" com "Cinema", será inativada depois (espera 201 Created)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Lazer",
+  "icon": "gamepad-2",
+  "color": "#9B59B6",
+  "subcategories": [
+    { "name": "Cinema", "icon": "clapperboard", "color": "#9B59B6", "order": 1 }
+  ]
+}
+
+###
+
+### POST /categories — "Educação" com "Cursos", será excluída depois (espera 201 Created)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Educação",
+  "icon": "graduation-cap",
+  "color": "#1ABC9C",
+  "subcategories": [
+    { "name": "Cursos", "icon": "book-open", "color": "#1ABC9C", "order": 1 }
+  ]
+}
+
+###
+
+### POST /categories — "Saúde" com "Farmácia" (sem gasto) e "Academia" (removida no formulário depois)
+### (espera 201 Created)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Saúde",
+  "icon": "heart-pulse",
+  "color": "#E74C3C",
+  "subcategories": [
+    { "name": "Farmácia", "icon": "pill", "color": "#E74C3C", "order": 1 },
+    { "name": "Academia", "icon": "dumbbell", "color": "#E74C3C", "order": 2 }
+  ]
+}
+
+###
+
+### POST /categories — "Transporte" com "Combustível", nunca terá gasto (espera 201 Created)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Transporte",
+  "icon": "car",
+  "color": "#34495E",
+  "subcategories": [
+    { "name": "Combustível", "icon": "fuel", "color": "#34495E", "order": 1 }
+  ]
+}
+
+###
+
+### GET /categories — capturar categorias e subcategorias do usuário A
+### (espera 200 OK com 6 categorias na ordem de criação: [0] "Moradia", [1] "Alimentação", [2] "Lazer",
+### [3] "Educação", [4] "Saúde", [5] "Transporte"; subcategorias pela "order")
+# @name categoriesA
+GET {{baseUrl}}/categories
+Authorization: Bearer {{token}}
+
+###
+
+@rentId = {{categoriesA.response.body.$[0].subcategories[0].id}}
+@energyId = {{categoriesA.response.body.$[0].subcategories[1].id}}
+@groceryId = {{categoriesA.response.body.$[1].subcategories[0].id}}
+@restaurantId = {{categoriesA.response.body.$[1].subcategories[1].id}}
+@leisureCategoryId = {{categoriesA.response.body.$[2].id}}
+@cinemaId = {{categoriesA.response.body.$[2].subcategories[0].id}}
+@educationCategoryId = {{categoriesA.response.body.$[3].id}}
+@coursesId = {{categoriesA.response.body.$[3].subcategories[0].id}}
+@healthCategoryId = {{categoriesA.response.body.$[4].id}}
+@pharmacyId = {{categoriesA.response.body.$[4].subcategories[0].id}}
+@gymId = {{categoriesA.response.body.$[4].subcategories[1].id}}
+
+############################################################
+# Preparação — usuário B (tem gastos no mesmo mês)
+############################################################
+
+### POST /auth/register — registrar o usuário B (espera 201 Created)
+# @name registerB
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Outro Usuario",
+  "email": "outro.gastos.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário B (espera 200 OK)
+# @name loginB
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerB.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@tokenB = {{loginB.response.body.$.token}}
+
+### POST /accounts — criar a conta do usuário B (espera 201 Created)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+Authorization: Bearer {{tokenB}}
+
+{
+  "name": "Conta do Outro",
+  "type": "CASH"
+}
+
+###
+
+### GET /accounts — capturar o id da conta do usuário B (espera 200 OK)
+# @name accountsB
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{tokenB}}
+
+###
+
+@otherAccountId = {{accountsB.response.body.$.items[0].id}}
+
+### POST /categories — "Casa" com "Aluguel do Outro" do usuário B (espera 201 Created)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{tokenB}}
+
+{
+  "name": "Casa",
+  "icon": "home",
+  "color": "#8E44AD",
+  "subcategories": [
+    { "name": "Aluguel do Outro", "icon": "building", "color": "#8E44AD", "order": 1 }
+  ]
+}
+
+###
+
+### GET /categories — capturar a subcategoria do usuário B (espera 200 OK)
+# @name categoriesB
+GET {{baseUrl}}/categories
+Authorization: Bearer {{tokenB}}
+
+###
+
+@otherSubcategoryId = {{categoriesB.response.body.$[0].subcategories[0].id}}
+
+### POST /transactions — saída avulsa de 9999 do usuário B em setembro, com subcategoria (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{tokenB}}
+
+{
+  "name": "Aluguel do Outro",
+  "value": 9999,
+  "direction": "OUT",
+  "accountId": "{{otherAccountId}}",
+  "subcategoryId": "{{otherSubcategoryId}}",
+  "expectedOn": "2026-09-10"
+}
+
+###
+
+### POST /transaction-series — série de saída mensal de 555 do usuário B, sem subcategoria, no dia 10,
+### início 2026-09-01 (espera 201 Created com { "id": "<uuid>" })
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{tokenB}}
+
+{
+  "name": "Assinatura do Outro",
+  "value": 555,
+  "direction": "OUT",
+  "accountId": "{{otherAccountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 10,
+  "startDate": "2026-09-01"
+}
+
+###
+
+############################################################
+# Transações avulsas do usuário A
+############################################################
+
+### POST /transactions — "Aluguel" pendente no último dia de setembro (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Aluguel",
+  "value": 1800,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{rentId}}",
+  "expectedOn": "2026-09-30"
+}
+
+###
+
+### POST /transactions — "Supermercado" efetivada em setembro (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Mercado do mes",
+  "value": 650.4,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{groceryId}}",
+  "status": "SETTLED",
+  "expectedOn": "2026-09-08",
+  "settledOn": "2026-09-08"
+}
+
+###
+
+### POST /transactions — "Supermercado" pendente em setembro, com centavos (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Mercado da semana",
+  "value": 120.35,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{groceryId}}",
+  "expectedOn": "2026-09-20"
+}
+
+###
+
+### POST /transactions — "Supermercado" no primeiro dia de outubro, fora de setembro (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Mercado de outubro",
+  "value": 999,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{groceryId}}",
+  "expectedOn": "2026-10-01"
+}
+
+###
+
+### POST /transactions — "Restaurantes" pendente em setembro (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Jantar",
+  "value": 89.9,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{restaurantId}}",
+  "expectedOn": "2026-09-12"
+}
+
+###
+
+### POST /transactions — "Restaurantes" cancelada em setembro, nunca soma (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Pizza cancelada",
+  "value": 60,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{restaurantId}}",
+  "status": "CANCELED",
+  "expectedOn": "2026-09-13"
+}
+
+###
+
+### POST /transactions — "Restaurantes" em setembro que será excluída (espera 201 Created com { "id": "<uuid>" })
+# @name createSnack
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Lanche excluido",
+  "value": 45,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{restaurantId}}",
+  "expectedOn": "2026-09-14"
+}
+
+###
+
+### DELETE /transactions/:id — excluir logicamente o "Lanche excluido" (espera 200 OK com { "success": true })
+DELETE {{baseUrl}}/transactions/{{createSnack.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+
+### POST /transactions — "Energia" pendente em setembro, soma com a série da mesma subcategoria (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Energia - ajuste",
+  "value": 15.25,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{energyId}}",
+  "expectedOn": "2026-09-22"
+}
+
+###
+
+### POST /transactions — "Cinema" (categoria "Lazer", inativada depois) em setembro (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Cinema",
+  "value": 40,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{cinemaId}}",
+  "expectedOn": "2026-09-18"
+}
+
+###
+
+### POST /transactions — "Cursos" (categoria "Educação", excluída depois) efetivada em setembro (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Curso online",
+  "value": 199.9,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{coursesId}}",
+  "status": "SETTLED",
+  "expectedOn": "2026-09-10",
+  "settledOn": "2026-09-10"
+}
+
+###
+
+### POST /transactions — "Academia" (removida no formulário depois) em setembro (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Mensalidade academia",
+  "value": 110,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{gymId}}",
+  "expectedOn": "2026-09-05"
+}
+
+###
+
+### POST /transactions — saída sem subcategoria em setembro (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Taxa bancaria",
+  "value": 33.33,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-09-03"
+}
+
+###
+
+### POST /transactions — entrada sem subcategoria em setembro, nunca entra no relatório (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Salario",
+  "value": 5000,
+  "direction": "IN",
+  "accountId": "{{accountId}}",
+  "status": "SETTLED",
+  "expectedOn": "2026-09-05",
+  "settledOn": "2026-09-05"
+}
+
+###
+
+############################################################
+# Séries do usuário A, sem nenhuma ocorrência gravada
+############################################################
+
+### POST /transaction-series — "Energia" mensal no dia 15, início 2026-09-01.
+### Ocorrências: índice 0 = 2026-09-15, 1 = 2026-10-15, ... (espera 201 Created com { "id": "<uuid>" })
+# @name createEnergy
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Conta de luz",
+  "value": 210.5,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{energyId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 15,
+  "startDate": "2026-09-01"
+}
+
+###
+
+@energySeriesId = {{createEnergy.response.body.$.id}}
+
+### POST /transaction-series — série de ENTRADA com a subcategoria "Aluguel", no dia 5, nunca entra
+### (espera 201 Created com { "id": "<uuid>" })
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Aluguel recebido",
+  "value": 1000,
+  "direction": "IN",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{rentId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 5,
+  "startDate": "2026-09-01"
+}
+
+###
+
+### POST /transaction-series — "Restaurantes" semanal às sextas (weekDay 5), início 2026-09-01, será excluída.
+### Ocorrências em setembro: índice 0 = 2026-09-04, 1 = 2026-09-11, 2 = 2026-09-18, 3 = 2026-09-25
+### (espera 201 Created com { "id": "<uuid>" })
+# @name createLunch
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Almoco de sexta",
+  "value": 45.5,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{restaurantId}}",
+  "kind": "OPEN",
+  "unit": "WEEK",
+  "interval": 1,
+  "weekDay": 5,
+  "startDate": "2026-09-01"
+}
+
+###
+
+@lunchSeriesId = {{createLunch.response.body.$.id}}
+
+############################################################
+# Mês com gastos
+############################################################
+
+### GET /reports/categories — setembro de 2026
+### "Aluguel" de 2026-09-30 entra; "Mercado de outubro" (2026-10-01), "Pizza cancelada", "Lanche excluido",
+### "Salario" (entrada) e "Aluguel recebido" (série de entrada) não; "Energia" soma a avulsa (15.25) com a
+### ocorrência gerada da série (210.5); "Restaurantes" soma a avulsa (89.9) com as 4 sextas geradas (4 x 45.5);
+### "Farmácia" e "Transporte / Combustível" não aparecem; nada do usuário B aparece.
+### (espera 200 OK com 8 itens, nesta ordem:
+### [0] { "categoryId": "<id de Moradia>", "categoryName": "Moradia", "categoryColor": "#4A90D9",
+###       "categoryIcon": "home", "subcategoryId": "<rentId>", "subcategoryName": "Aluguel",
+###       "subcategoryColor": "#4A90D9", "subcategoryIcon": "building", "total": 1800 };
+### [1] { "categoryName": "Alimentação", "categoryColor": "#F5A623", "categoryIcon": "utensils",
+###       "subcategoryId": "<groceryId>", "subcategoryName": "Supermercado", "subcategoryColor": "#F5A623",
+###       "subcategoryIcon": "shopping-cart", "total": 770.75 };
+### [2] { "categoryName": "Alimentação", "subcategoryName": "Restaurantes", "subcategoryIcon": "utensils-crossed",
+###       "total": 271.9 };
+### [3] { "categoryName": "Moradia", "subcategoryName": "Energia", "subcategoryIcon": "zap", "total": 225.75 };
+### [4] { "categoryName": "Educação", "categoryColor": "#1ABC9C", "subcategoryName": "Cursos", "total": 199.9 };
+### [5] { "categoryName": "Saúde", "categoryColor": "#E74C3C", "subcategoryName": "Academia", "total": 110 };
+### [6] { "categoryName": "Lazer", "categoryColor": "#9B59B6", "subcategoryName": "Cinema", "total": 40 };
+### [7] { "categoryId": null, "categoryName": null, "categoryColor": null, "categoryIcon": null,
+###       "subcategoryId": null, "subcategoryName": null, "subcategoryColor": null, "subcategoryIcon": null,
+###       "total": 33.33 }
+### — soma dos "total": 3451.63)
+GET {{baseUrl}}/reports/categories?from=2026-09-01&to=2026-09-30
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement — setembro de 2026, para comparar com o relatório acima
+### (espera 200 OK com "meta.total": 17: 11 avulsas ("Lanche excluido" e "Mercado de outubro" ficam fora),
+### a ocorrência gerada de "Conta de luz", a de "Aluguel recebido" e as 4 de "Almoco de sexta".
+### Somando as entradas "direction": "OUT" sem "status": "CANCELED": 1800 + 650.4 + 120.35 + 89.9 + 15.25
+### + 40 + 199.9 + 110 + 33.33 + 210.5 + 4 x 45.5 = 3451.63 — igual à soma dos "total" do relatório)
+GET {{baseUrl}}/statement?from=2026-09-01&to=2026-09-30
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Ocorrência gravada soma uma vez
+############################################################
+
+### GET /scheduled-transactions/:seriesId/0 — capturar o id efêmero da ocorrência de setembro de "Conta de luz"
+### (espera 200 OK com "materialized": false e "occurrenceOn": "2026-09-15")
+# @name energyOccurrence0
+GET {{baseUrl}}/scheduled-transactions/{{energySeriesId}}/0
+Authorization: Bearer {{token}}
+
+###
+
+@energyOccurrence0Id = {{energyOccurrence0.response.body.$.id}}
+
+### PUT /scheduled-transactions/:seriesId/0 — gravar a ocorrência com valor 250
+### (espera 200 OK com { "id": "<energyOccurrence0Id>" })
+PUT {{baseUrl}}/scheduled-transactions/{{energySeriesId}}/0
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{energyOccurrence0Id}}",
+  "name": "Conta de luz",
+  "value": 250,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{energyId}}",
+  "status": "PENDING",
+  "expectedOn": "2026-09-15"
+}
+
+###
+
+### GET /reports/categories — "Energia" soma o valor gravado uma única vez (15.25 + 250, e não + 210.5)
+### (espera 200 OK com 8 itens: [0] "Aluguel": 1800; [1] "Supermercado": 770.75; [2] "Restaurantes": 271.9;
+### [3] "Energia": 265.25; [4] "Cursos": 199.9; [5] "Academia": 110; [6] "Cinema": 40;
+### [7] (sem classificação): 33.33)
+GET {{baseUrl}}/reports/categories?from=2026-09-01&to=2026-09-30
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Ocorrência gravada cancelada
+############################################################
+
+### PUT /scheduled-transactions/:seriesId/0 — cancelar a ocorrência gravada
+### (espera 200 OK com { "id": "<energyOccurrence0Id>" })
+PUT {{baseUrl}}/scheduled-transactions/{{energySeriesId}}/0
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{energyOccurrence0Id}}",
+  "name": "Conta de luz",
+  "value": 250,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{energyId}}",
+  "status": "CANCELED",
+  "expectedOn": "2026-09-15"
+}
+
+###
+
+### GET /reports/categories — a cancelada não soma e não reaparece gerada: "Energia" fica só com a avulsa
+### (espera 200 OK com 8 itens: [0] "Aluguel": 1800; [1] "Supermercado": 770.75; [2] "Restaurantes": 271.9;
+### [3] "Cursos": 199.9; [4] "Academia": 110; [5] "Cinema": 40; [6] (sem classificação): 33.33;
+### [7] "Energia": 15.25 — soma dos "total": 3241.13)
+GET {{baseUrl}}/reports/categories?from=2026-09-01&to=2026-09-30
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement — setembro de novo
+### (espera 200 OK com "meta.total": 17; a ocorrência "occurrenceIndex": 0 de "Conta de luz" vem gravada com
+### "status": "CANCELED" e "value": 250, sem outra entrada gerada para o mesmo índice. Somando as saídas
+### não canceladas: 3241.13 — igual à soma dos "total" do relatório acima)
+GET {{baseUrl}}/statement?from=2026-09-01&to=2026-09-30
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Ocorrência revertida volta a ser gerada
+############################################################
+
+### DELETE /scheduled-transactions/:seriesId/0 — reverter a ocorrência (espera 200 OK com { "success": true })
+DELETE {{baseUrl}}/scheduled-transactions/{{energySeriesId}}/0
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/categories — "Energia" volta a somar a ocorrência gerada (15.25 + 210.5)
+### (espera 200 OK com os mesmos 8 itens da primeira consulta de setembro: [0] "Aluguel": 1800;
+### [1] "Supermercado": 770.75; [2] "Restaurantes": 271.9; [3] "Energia": 225.75; [4] "Cursos": 199.9;
+### [5] "Academia": 110; [6] "Cinema": 40; [7] (sem classificação): 33.33)
+GET {{baseUrl}}/reports/categories?from=2026-09-01&to=2026-09-30
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Série excluída
+############################################################
+
+### GET /scheduled-transactions/:seriesId/1 — capturar o id efêmero da 2ª sexta de "Almoco de sexta"
+### (espera 200 OK com "materialized": false e "occurrenceOn": "2026-09-11")
+# @name lunchOccurrence1
+GET {{baseUrl}}/scheduled-transactions/{{lunchSeriesId}}/1
+Authorization: Bearer {{token}}
+
+###
+
+### PUT /scheduled-transactions/:seriesId/1 — gravar a 2ª sexta efetivada com valor 50
+### (espera 200 OK com { "id": "<id do lunchOccurrence1>" })
+PUT {{baseUrl}}/scheduled-transactions/{{lunchSeriesId}}/1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{lunchOccurrence1.response.body.$.id}}",
+  "name": "Almoco de sexta",
+  "value": 50,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "subcategoryId": "{{restaurantId}}",
+  "status": "SETTLED",
+  "expectedOn": "2026-09-11",
+  "settledOn": "2026-09-11"
+}
+
+###
+
+### GET /reports/categories — "Restaurantes" soma a avulsa, 3 sextas geradas e a gravada (89.9 + 3 x 45.5 + 50)
+### (espera 200 OK com 8 itens; [2] "Restaurantes": 276.4; os demais iguais à consulta anterior)
+GET {{baseUrl}}/reports/categories?from=2026-09-01&to=2026-09-30
+Authorization: Bearer {{token}}
+
+###
+
+### DELETE /transaction-series/:id — exclusão lógica de "Almoco de sexta" (espera 200 OK com { "success": true })
+DELETE {{baseUrl}}/transaction-series/{{lunchSeriesId}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/categories — nem a sexta gravada nem as geradas entram: "Restaurantes" fica só com a avulsa
+### (espera 200 OK com 8 itens: [0] "Aluguel": 1800; [1] "Supermercado": 770.75; [2] "Energia": 225.75;
+### [3] "Cursos": 199.9; [4] "Academia": 110; [5] "Restaurantes": 89.9; [6] "Cinema": 40;
+### [7] (sem classificação): 33.33 — soma dos "total": 3269.63)
+GET {{baseUrl}}/reports/categories?from=2026-09-01&to=2026-09-30
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Categoria inativa, categoria excluída e subcategoria removida no formulário
+############################################################
+
+### PUT /categories/:id — inativar "Lazer", mantendo a subcategoria "Cinema" (espera 200 OK com { "success": true })
+PUT {{baseUrl}}/categories/{{leisureCategoryId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Lazer",
+  "icon": "gamepad-2",
+  "color": "#9B59B6",
+  "isActive": false,
+  "subcategories": [
+    { "id": "{{cinemaId}}", "name": "Cinema", "icon": "clapperboard", "color": "#9B59B6", "order": 1 }
+  ]
+}
+
+###
+
+### DELETE /categories/:id — excluir logicamente "Educação" e a subcategoria "Cursos"
+### (espera 200 OK com { "success": true })
+DELETE {{baseUrl}}/categories/{{educationCategoryId}}
+Authorization: Bearer {{token}}
+
+###
+
+### PUT /categories/:id — "Saúde" sem "Academia": a subcategoria é apagada e a transação dela fica sem subcategoria
+### (espera 200 OK com { "success": true })
+PUT {{baseUrl}}/categories/{{healthCategoryId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Saúde",
+  "icon": "heart-pulse",
+  "color": "#E74C3C",
+  "subcategories": [
+    { "id": "{{pharmacyId}}", "name": "Farmácia", "icon": "pill", "color": "#E74C3C", "order": 1 }
+  ]
+}
+
+###
+
+### GET /reports/categories — "Cinema" (categoria inativa) e "Cursos" (categoria excluída) continuam com os nomes;
+### os 110 de "Academia" passam para o item sem classificação (33.33 + 110); "Saúde" (só "Farmácia", sem gasto)
+### e "Transporte" não aparecem
+### (espera 200 OK com 7 itens: [0] "Moradia / Aluguel": 1800; [1] "Alimentação / Supermercado": 770.75;
+### [2] "Moradia / Energia": 225.75;
+### [3] { "categoryId": "<educationCategoryId>", "categoryName": "Educação", "categoryColor": "#1ABC9C",
+###       "categoryIcon": "graduation-cap", "subcategoryId": "<coursesId>", "subcategoryName": "Cursos",
+###       "subcategoryColor": "#1ABC9C", "subcategoryIcon": "book-open", "total": 199.9 };
+### [4] (sem classificação): 143.33; [5] "Alimentação / Restaurantes": 89.9;
+### [6] { "categoryId": "<leisureCategoryId>", "categoryName": "Lazer", "categoryColor": "#9B59B6",
+###       "categoryIcon": "gamepad-2", "subcategoryId": "<cinemaId>", "subcategoryName": "Cinema",
+###       "subcategoryColor": "#9B59B6", "subcategoryIcon": "clapperboard", "total": 40 }
+### — soma dos "total": 3269.63, a mesma de antes: nada some do relatório)
+GET {{baseUrl}}/reports/categories?from=2026-09-01&to=2026-09-30
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Outros meses
+############################################################
+
+### GET /reports/categories — outubro de 2026: a saída de 2026-10-01 cai em outubro, ao lado da
+### ocorrência gerada de outubro de "Conta de luz"; "Almoco de sexta" (excluída) não gera nada
+### (espera 200 OK com 2 itens: [0] "Alimentação / Supermercado": 999; [1] "Moradia / Energia": 210.5)
+GET {{baseUrl}}/reports/categories?from=2026-10-01&to=2026-10-31
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/categories — junho de 2026, antes de qualquer gasto (espera 200 OK com [])
+GET {{baseUrl}}/reports/categories?from=2026-06-01&to=2026-06-30
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Dados de outro usuário
+############################################################
+
+### GET /reports/categories — o relatório de B só enxerga os dados de B
+### (espera 200 OK com 2 itens: [0] { "categoryName": "Casa", "subcategoryId": "<otherSubcategoryId>",
+### "subcategoryName": "Aluguel do Outro", "total": 9999 }; [1] (sem classificação): 555 — a ocorrência
+### gerada da série sem subcategoria. Nenhum item de A; e nenhum relatório de A acima trouxe 9999 ou 555)
+GET {{baseUrl}}/reports/categories?from=2026-09-01&to=2026-09-30
+Authorization: Bearer {{tokenB}}
+
+###
+
+############################################################
+# Período inválido
+############################################################
+
+### GET /reports/categories sem from (espera 400 com "message": ["INVALID_CATEGORY_REPORT_PERIOD"])
+GET {{baseUrl}}/reports/categories?to=2026-09-30
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/categories sem to (espera 400 com "message": ["INVALID_CATEGORY_REPORT_PERIOD"])
+GET {{baseUrl}}/reports/categories?from=2026-09-01
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/categories sem from e sem to (espera 400 com "message": ["INVALID_CATEGORY_REPORT_PERIOD"])
+GET {{baseUrl}}/reports/categories
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/categories com from=2026-13-01 (espera 400 com "message": ["INVALID_CATEGORY_REPORT_PERIOD"])
+GET {{baseUrl}}/reports/categories?from=2026-13-01&to=2027-01-15
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/categories com to=2026-02-30 (espera 400 com "message": ["INVALID_CATEGORY_REPORT_PERIOD"])
+GET {{baseUrl}}/reports/categories?from=2026-02-01&to=2026-02-30
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/categories com período invertido (espera 400 com "message": ["INVALID_CATEGORY_REPORT_PERIOD"])
+GET {{baseUrl}}/reports/categories?from=2026-09-30&to=2026-09-01
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/categories com 367 dias, de 2026-01-01 a 2027-01-02
+### (espera 400 com "message": ["INVALID_CATEGORY_REPORT_PERIOD"])
+GET {{baseUrl}}/reports/categories?from=2026-01-01&to=2027-01-02
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Sem token
+############################################################
+
+### GET /reports/categories sem token (espera 401 Unauthorized)
+GET {{baseUrl}}/reports/categories?from=2026-09-01&to=2026-09-30

@@ -1,0 +1,73 @@
+@baseUrl = http://localhost:4000
+
+# Obtenha um token via POST /auth/login e cole abaixo
+@token = SEU_TOKEN_AQUI
+
+### GET /accounts — listar contas do usuário autenticado (espera 200 OK)
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{token}}
+
+###
+
+### POST /accounts — criar nova conta (espera 201 Created)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Conta Teste",
+  "type": "CHECKING",
+  "description": "Conta criada via teste",
+  "financialInstitution": "Banco Teste",
+  "color": "#336699",
+  "icon": "building-2"
+}
+
+###
+
+### POST /accounts — criar com nome duplicado (espera 400 Bad Request)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Conta Teste",
+  "type": "SAVINGS"
+}
+
+###
+
+### PUT /accounts/:id — atualizar conta (substitua :id pelo id retornado no GET)
+PUT {{baseUrl}}/accounts/SUBSTITUA_PELO_ID
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Conta Teste Atualizada",
+  "type": "SAVINGS",
+  "description": "Conta atualizada via teste",
+  "color": "#FF5733",
+  "isActive": true
+}
+
+###
+
+### DELETE /accounts/:id — excluir conta (substitua :id pelo id retornado no GET)
+DELETE {{baseUrl}}/accounts/SUBSTITUA_PELO_ID
+Authorization: Bearer {{token}}
+
+###
+
+### GET /accounts sem token (espera 401 Unauthorized)
+GET {{baseUrl}}/accounts
+
+###
+
+### POST /accounts sem token (espera 401 Unauthorized)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+
+{
+  "name": "Sem auth",
+  "type": "CASH"
+}

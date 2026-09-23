@@ -1,0 +1,33 @@
+// Prisma models for module: auth
+
+model User {
+  id        String   @id
+  name      String
+  email     String   @unique
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  password   Password?
+  accounts   Account[]
+  cards      Card[]
+  categories Category[]
+  transactions Transaction[]
+  transactionSeries TransactionSeries[]
+  scheduledTransactions ScheduledTransaction[]
+
+  @@map("user")
+}
+
+model Password {
+  // Shared-primary-key 1:1 relation: `id` is BOTH the primary key and the
+  // foreign key to `user.id` (password.id === user.id at the domain boundary).
+  id        String   @id
+  value     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("password")
+}

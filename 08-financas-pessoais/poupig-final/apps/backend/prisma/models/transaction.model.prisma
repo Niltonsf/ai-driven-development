@@ -1,0 +1,123 @@
+// Prisma models for module: transaction
+
+enum Direction {
+  IN
+  OUT
+}
+
+enum TransactionStatus {
+  PENDING
+  SETTLED
+  CANCELED
+}
+
+enum SeriesKind {
+  OPEN
+  CLOSED
+}
+
+enum FrequencyUnit {
+  WEEK
+  MONTH
+  YEAR
+}
+
+model Transaction {
+  id            String            @id
+  userId        String            @map("user_id")
+  name          String            @db.VarChar(100)
+  note          String?           @db.VarChar(500)
+  value         Decimal           @db.Decimal(14, 2)
+  direction     Direction
+  accountId     String            @map("account_id")
+  creditCardId  String?           @map("credit_card_id")
+  subcategoryId String?           @map("subcategory_id")
+  status        TransactionStatus
+  expectedOn    DateTime          @map("expected_on") @db.Date
+  settledOn     DateTime?         @map("settled_on") @db.Date
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+  deletedAt     DateTime?         @map("deleted_at")
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account     Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  creditCard  Card?        @relation(fields: [creditCardId], references: [id], onDelete: SetNull)
+  subcategory Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+
+  @@index([userId, expectedOn])
+  @@index([accountId])
+  @@index([creditCardId])
+  @@index([subcategoryId])
+  @@map("transaction")
+}
+
+model TransactionSeries {
+  id                String        @id
+  userId            String        @map("user_id")
+  name              String        @db.VarChar(100)
+  note              String?       @db.VarChar(500)
+  value             Decimal       @db.Decimal(14, 2)
+  direction         Direction
+  accountId         String        @map("account_id")
+  creditCardId      String?       @map("credit_card_id")
+  subcategoryId     String?       @map("subcategory_id")
+  kind              SeriesKind
+  frequencyUnit     FrequencyUnit @map("frequency_unit")
+  frequencyInterval Int           @map("frequency_interval") @db.SmallInt
+  weekDay           Int?          @map("week_day") @db.SmallInt
+  dayOfMonth        Int?          @map("day_of_month") @db.SmallInt
+  month             Int?          @db.SmallInt
+  installments      Int?          @db.SmallInt
+  startDate         DateTime      @map("start_date") @db.Date
+  endDate           DateTime?     @map("end_date") @db.Date
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  deletedAt         DateTime?     @map("deleted_at")
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account     Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  creditCard  Card?        @relation(fields: [creditCardId], references: [id], onDelete: SetNull)
+  subcategory Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+
+  scheduledTransactions ScheduledTransaction[]
+
+  @@index([userId, startDate])
+  @@index([accountId])
+  @@index([creditCardId])
+  @@index([subcategoryId])
+  @@map("transaction_series")
+}
+
+model ScheduledTransaction {
+  id              String            @id
+  userId          String            @map("user_id")
+  seriesId        String            @map("series_id")
+  occurrenceIndex Int               @map("occurrence_index")
+  occurrenceOn    DateTime          @map("occurrence_on") @db.Date
+  name            String            @db.VarChar(100)
+  note            String?           @db.VarChar(500)
+  value           Decimal           @db.Decimal(14, 2)
+  direction       Direction
+  accountId       String            @map("account_id")
+  creditCardId    String?           @map("credit_card_id")
+  subcategoryId   String?           @map("subcategory_id")
+  status          TransactionStatus
+  expectedOn      DateTime          @map("expected_on") @db.Date
+  settledOn       DateTime?         @map("settled_on") @db.Date
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  series      TransactionSeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account     Account           @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  creditCard  Card?             @relation(fields: [creditCardId], references: [id], onDelete: SetNull)
+  subcategory Subcategory?      @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+
+  @@unique([seriesId, occurrenceIndex])
+  @@index([userId, expectedOn])
+  @@index([userId, occurrenceOn])
+  @@index([accountId])
+  @@index([creditCardId])
+  @@index([subcategoryId])
+  @@map("scheduled_transaction")
+}

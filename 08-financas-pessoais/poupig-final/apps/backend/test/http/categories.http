@@ -1,0 +1,126 @@
+@baseUrl = http://localhost:4000
+
+### POST /auth/login — autentica e captura o token para as requisições abaixo (execute esta requisição primeiro)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "usuario@formacao.dev",
+  "password": "#Senha123"
+}
+
+###
+
+@token = {{login.response.body.token}}
+
+### GET /categories — listar categorias do usuário autenticado, com subcategorias ordenadas (espera 200 OK)
+GET {{baseUrl}}/categories
+Authorization: Bearer {{token}}
+
+###
+
+### POST /categories/default — aplicar o catálogo de categorias padrão (espera 201 Created com { success: true })
+POST {{baseUrl}}/categories/default
+Authorization: Bearer {{token}}
+
+###
+
+### POST /categories/default — reaplicar o catálogo (idempotente: nada é duplicado, espera { success: true })
+POST {{baseUrl}}/categories/default
+Authorization: Bearer {{token}}
+
+###
+
+### POST /categories/default sem token (espera 401 Unauthorized)
+POST {{baseUrl}}/categories/default
+
+###
+
+### POST /categories — criar nova categoria com subcategorias (espera 201 Created)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Categoria Teste",
+  "icon": "tag",
+  "color": "#336699",
+  "subcategories": [
+    { "name": "Subcategoria Um", "icon": "tag", "color": "#336699", "order": 1 },
+    { "name": "Subcategoria Dois", "icon": "tag", "color": "#3366AA", "order": 2 }
+  ]
+}
+
+###
+
+### POST /categories — criar com nome duplicado (espera 400 Bad Request)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Categoria Teste",
+  "subcategories": [
+    { "name": "Outra Subcategoria", "order": 1 }
+  ]
+}
+
+###
+
+### POST /categories — criar com order duplicado entre subcategorias (espera 400 Bad Request)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Categoria Order Duplicado",
+  "subcategories": [
+    { "name": "Sub A", "order": 1 },
+    { "name": "Sub B", "order": 1 }
+  ]
+}
+
+###
+
+### PUT /categories/:id — atualizar categoria e reconciliar subcategorias (espera 200 OK)
+# Substitua :id pelo id retornado no GET/POST, e o "id" da subcategoria existente
+# pelo id real de uma subcategoria já persistida (ex.: "Subcategoria Um").
+# Este payload demonstra reconciliação: atualiza a subcategoria existente (com id),
+# adiciona uma nova (sem id) e remove a que não for enviada (ex.: "Subcategoria Dois").
+PUT {{baseUrl}}/categories/SUBSTITUA_PELO_ID
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Categoria Teste Atualizada",
+  "icon": "tags",
+  "color": "#FF5733",
+  "isActive": true,
+  "subcategories": [
+    { "id": "SUBSTITUA_PELO_ID_DA_SUBCATEGORIA_EXISTENTE", "name": "Subcategoria Um Atualizada", "icon": "tag", "color": "#FF5733", "order": 1 },
+    { "name": "Subcategoria Nova", "icon": "tag", "color": "#FF8C33", "order": 2 }
+  ]
+}
+
+###
+
+### DELETE /categories/:id — soft delete da categoria e subcategorias (espera 200 OK)
+DELETE {{baseUrl}}/categories/SUBSTITUA_PELO_ID
+Authorization: Bearer {{token}}
+
+###
+
+### GET /categories sem token (espera 401 Unauthorized)
+GET {{baseUrl}}/categories
+
+###
+
+### POST /categories sem token (espera 401 Unauthorized)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+
+{
+  "name": "Sem auth",
+  "subcategories": []
+}

@@ -1,0 +1,573 @@
+@baseUrl = http://localhost:4000
+@password = #Senha123
+
+# Roteiro executável em ordem (Rest Client) contra o backend com banco migrado e DEV_TOOLS_ENABLED="true".
+# Cada execução registra três usuários novos (e-mails com {{$guid}}), então as contagens abaixo valem
+# para uma execução completa do roteiro.
+# Datas usam {{$datetime ...}}, que o Rest Client calcula em UTC — a mesma definição de "hoje" do gerador.
+# A seção final ("Recurso desligado") EXIGE reiniciar o backend com a chave desligada; está marcada nela.
+# Erros seguem o formato do ApiExceptionFilter:
+# { "statusCode": 400|404, "error": "...", "message": ["CODIGO", ...], "path": "...", "timestamp": "..." }
+# Resumo de sucesso (200):
+# { "accounts": { "requested", "created", "skipped", "errors": [] }, "creditCards": {...}, "transactions": {...}, "seed": <inteiro> }
+# Resumo de sucesso do gerador de séries (200):
+# { "recurrences": { "requested", "created", "skipped", "errors": [] }, "installmentPlans": {...},
+#   "occurrences": { "settled", "pending", "skipped", "errors": [] }, "seed": <inteiro> }
+
+############################################################
+# Preparação — usuário A (execuções completas)
+############################################################
+
+### POST /auth/register — registrar o usuário A (espera 201 Created)
+# @name registerA
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Usuario Gerador",
+  "email": "gerador.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário A (espera 200 OK com token)
+# @name loginA
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerA.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@token = {{loginA.response.body.$.token}}
+
+############################################################
+# Status (recurso ligado)
+############################################################
+
+### GET /dev/data-generator/status — recurso ligado (espera 200 OK com { "enabled": true })
+GET {{baseUrl}}/dev/data-generator/status
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Sem autenticação
+############################################################
+
+### GET /dev/data-generator/status sem token (espera 401 Unauthorized)
+GET {{baseUrl}}/dev/data-generator/status
+
+###
+
+### POST /dev/data-generator/transactions sem token (espera 401 Unauthorized e nada gravado)
+POST {{baseUrl}}/dev/data-generator/transactions
+Content-Type: application/json
+
+{
+  "accounts": 1,
+  "months": 1
+}
+
+###
+
+############################################################
+# Falhas de validação (nada é gravado)
+############################################################
+
+### POST /dev/data-generator/transactions — transações sem nenhuma conta existente nem a criar (espera 400 com "message": ["DEV_DATA_ACCOUNT_REQUIRED"])
+# Precisa rodar antes de qualquer conta do usuário A existir.
+POST {{baseUrl}}/dev/data-generator/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "accounts": 0,
+  "creditCards": 0,
+  "transactions": 10,
+  "months": 1
+}
+
+###
+
+### POST /dev/data-generator/transactions — nada marcado (espera 400 com "message": ["INVALID_DEV_DATA_REQUEST"])
+POST {{baseUrl}}/dev/data-generator/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "accounts": 0,
+  "creditCards": 0,
+  "transactions": 0,
+  "months": 3
+}
+
+###
+
+### POST /dev/data-generator/transactions — quantidade acima do teto (espera 400 com "message" contendo "INVALID_DEV_DATA_QUANTITY")
+POST {{baseUrl}}/dev/data-generator/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "accounts": 1,
+  "transactions": 501,
+  "months": 1
+}
+
+###
+
+### POST /dev/data-generator/transactions — quantidade não numérica (espera 400 com "message": ["INVALID_DEV_DATA_QUANTITY"])
+POST {{baseUrl}}/dev/data-generator/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "accounts": "abc",
+  "months": 1
+}
+
+###
+
+### POST /dev/data-generator/transactions — período ausente (espera 400 com "message": ["INVALID_DEV_DATA_PERIOD"])
+POST {{baseUrl}}/dev/data-generator/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "accounts": 1
+}
+
+###
+
+### GET /accounts — nenhuma das falhas acima gravou algo (espera 200 OK com "items": [] e "total": 0)
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Execução só de contas
+############################################################
+
+### POST /dev/data-generator/transactions — só contas (espera 200 OK: accounts { requested: 3, created: 3, skipped: 0 }, creditCards e transactions com requested: 0, e "seed" inteiro)
+POST {{baseUrl}}/dev/data-generator/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "accounts": 3,
+  "creditCards": 0,
+  "transactions": 0,
+  "months": 1
+}
+
+###
+
+### GET /accounts — as 3 contas geradas aparecem (espera 200 OK com "total": 3)
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{token}}
+
+###
+
+### POST /dev/data-generator/transactions — quantidades como string (espera 200 OK com accounts { requested: 2, created: 2 }; nome repetido ganha sufixo numérico)
+POST {{baseUrl}}/dev/data-generator/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "accounts": "2",
+  "months": "1"
+}
+
+###
+
+############################################################
+# Execução completa
+############################################################
+
+### POST /categories/default — aplicar as categorias padrão do usuário A (espera 201 Created), para as transações ganharem subcategoria
+POST {{baseUrl}}/categories/default
+Authorization: Bearer {{token}}
+
+###
+
+### POST /dev/data-generator/transactions — execução completa; o "userId" do corpo é ignorado (espera 200 OK: accounts 2/2, creditCards 2/2, transactions { requested: 60, created: 60, skipped: 0, errors: [] })
+# @name fullRun
+POST {{baseUrl}}/dev/data-generator/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "userId": "00000000-0000-4000-8000-000000000001",
+  "accounts": 2,
+  "creditCards": 2,
+  "transactions": 60,
+  "months": 3
+}
+
+###
+
+### GET /accounts — contas acumuladas das três execuções (espera 200 OK com "total": 7)
+GET {{baseUrl}}/accounts?pageSize=50
+Authorization: Bearer {{token}}
+
+###
+
+### GET /cards — cartões gerados (espera 200 OK com "total": 2)
+GET {{baseUrl}}/cards
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — todas pertencem ao usuário autenticado (espera 200 OK com "meta.total": 60)
+GET {{baseUrl}}/transactions?pageSize=1
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — mês atual (espera 200 OK com ao menos 1 item; dias anteriores a hoje com "status": "SETTLED" e "settledOn" = "expectedOn", de hoje em diante "PENDING" com "settledOn": null; nenhuma data depois do fim do mês)
+GET {{baseUrl}}/transactions?expectedFrom={{$datetime 'YYYY-MM-01'}}&pageSize=100
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — nenhuma pendente antes de hoje (espera 200 OK com "meta.total": 0)
+GET {{baseUrl}}/transactions?status=PENDING&expectedTo={{$datetime 'YYYY-MM-DD' -1 d}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — nenhuma efetivada de hoje em diante (espera 200 OK com "meta.total": 0)
+GET {{baseUrl}}/transactions?status=SETTLED&expectedFrom={{$datetime 'YYYY-MM-DD'}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — entradas nunca têm cartão (espera 200 OK com "data": [] e "meta.total": 0)
+GET {{baseUrl}}/transactions?direction=IN&onlyCreditCard=true
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Mesma semente duas vezes — usuário B (sem dados anteriores)
+############################################################
+
+### POST /auth/register — registrar o usuário B (espera 201 Created)
+# @name registerB
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Usuario Semente",
+  "email": "semente.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário B (espera 200 OK)
+# @name loginB
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerB.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@tokenB = {{loginB.response.body.$.token}}
+
+### POST /dev/data-generator/transactions — primeira execução com seed 7 (espera 200 OK: accounts 2/2, creditCards 2/2 e "seed": 7)
+POST {{baseUrl}}/dev/data-generator/transactions
+Content-Type: application/json
+Authorization: Bearer {{tokenB}}
+
+{
+  "accounts": 2,
+  "creditCards": 2,
+  "months": 1,
+  "seed": 7
+}
+
+###
+
+### POST /dev/data-generator/transactions — segunda execução com seed 7 (espera 200 OK: accounts 2/2, creditCards 2/2, "errors": [] e "seed": 7)
+POST {{baseUrl}}/dev/data-generator/transactions
+Content-Type: application/json
+Authorization: Bearer {{tokenB}}
+
+{
+  "accounts": 2,
+  "creditCards": 2,
+  "months": 1,
+  "seed": 7
+}
+
+###
+
+### GET /accounts — mesmos nomes da primeira execução e, da segunda, os mesmos acrescidos de " 2" (espera 200 OK com "total": 4)
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{tokenB}}
+
+###
+
+### GET /cards — mesmos nomes da primeira execução e, da segunda, os mesmos acrescidos de " 2" (espera 200 OK com "total": 4)
+GET {{baseUrl}}/cards
+Authorization: Bearer {{tokenB}}
+
+###
+
+############################################################
+# Séries e parcelas — usuário C (sem dados anteriores)
+############################################################
+# O gerador de séries grava cada série e as ocorrências dela até o último dia do mês atual:
+# antes de hoje "SETTLED" com "settledOn" = data; de hoje até o fim do mês "PENDING" com "settledOn": null.
+# Ocorrências de meses futuros não são gravadas: o extrato continua gerando-as (id efêmero).
+
+### POST /auth/register — registrar o usuário C (espera 201 Created)
+# @name registerC
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Usuario Series",
+  "email": "series.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário C (espera 200 OK)
+# @name loginC
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerC.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@tokenC = {{loginC.response.body.$.token}}
+
+### POST /dev/data-generator/series sem token (espera 401 Unauthorized e nada gravado)
+POST {{baseUrl}}/dev/data-generator/series
+Content-Type: application/json
+
+{
+  "recurrences": 1,
+  "months": 1
+}
+
+###
+
+### POST /dev/data-generator/series — usuário sem nenhuma conta (espera 400 com "message": ["DEV_DATA_ACCOUNT_REQUIRED"])
+# Precisa rodar antes de qualquer conta do usuário C existir. Esta parte não cria contas.
+POST {{baseUrl}}/dev/data-generator/series
+Content-Type: application/json
+Authorization: Bearer {{tokenC}}
+
+{
+  "recurrences": 5,
+  "months": 3
+}
+
+###
+
+### POST /dev/data-generator/transactions — criar 2 contas e 1 cartão para o usuário C (espera 200 OK: accounts 2/2, creditCards 1/1)
+POST {{baseUrl}}/dev/data-generator/transactions
+Content-Type: application/json
+Authorization: Bearer {{tokenC}}
+
+{
+  "accounts": 2,
+  "creditCards": 1,
+  "months": 1
+}
+
+###
+
+### POST /categories/default — aplicar as categorias padrão do usuário C (espera 201 Created), para as séries ganharem subcategoria
+POST {{baseUrl}}/categories/default
+Authorization: Bearer {{tokenC}}
+
+###
+
+### POST /dev/data-generator/series — quantidade acima do teto (espera 400 com "message": ["INVALID_DEV_DATA_QUANTITY"])
+POST {{baseUrl}}/dev/data-generator/series
+Content-Type: application/json
+Authorization: Bearer {{tokenC}}
+
+{
+  "installmentPlans": 21,
+  "months": 3
+}
+
+###
+
+### POST /dev/data-generator/series — quantidade não numérica (espera 400 com "message": ["INVALID_DEV_DATA_QUANTITY"])
+POST {{baseUrl}}/dev/data-generator/series
+Content-Type: application/json
+Authorization: Bearer {{tokenC}}
+
+{
+  "installmentPlans": "abc",
+  "months": 1
+}
+
+###
+
+### POST /dev/data-generator/series — nada marcado (espera 400 com "message": ["INVALID_DEV_DATA_REQUEST"])
+POST {{baseUrl}}/dev/data-generator/series
+Content-Type: application/json
+Authorization: Bearer {{tokenC}}
+
+{
+  "recurrences": 0,
+  "installmentPlans": 0,
+  "months": 3
+}
+
+###
+
+### GET /transaction-series — nenhuma das falhas acima gravou série (espera 200 OK com "meta.total": 0)
+GET {{baseUrl}}/transaction-series
+Authorization: Bearer {{tokenC}}
+
+###
+
+### POST /dev/data-generator/series — só recorrências, quantidades como string (espera 200 OK: recurrences { requested: 2, created: 2, skipped: 0 }, installmentPlans { requested: 0 }, occurrences com "skipped": 0 e "errors": [] e "seed" inteiro)
+POST {{baseUrl}}/dev/data-generator/series
+Content-Type: application/json
+Authorization: Bearer {{tokenC}}
+
+{
+  "recurrences": "2",
+  "months": "1"
+}
+
+###
+
+### POST /dev/data-generator/series — só parcelamentos (espera 200 OK: recurrences { requested: 0 }, installmentPlans { requested: 2, created: 2, skipped: 0 }, occurrences com "skipped": 0)
+POST {{baseUrl}}/dev/data-generator/series
+Content-Type: application/json
+Authorization: Bearer {{tokenC}}
+
+{
+  "recurrences": 0,
+  "installmentPlans": 2,
+  "months": 3
+}
+
+###
+
+### POST /dev/data-generator/series — recorrências e parcelamentos; o "userId" do corpo é ignorado (espera 200 OK: recurrences 5/5, installmentPlans 3/3, occurrences { skipped: 0, errors: [] } com settled + pending > 0 e "seed": 20)
+POST {{baseUrl}}/dev/data-generator/series
+Content-Type: application/json
+Authorization: Bearer {{tokenC}}
+
+{
+  "userId": "00000000-0000-4000-8000-000000000001",
+  "recurrences": 5,
+  "installmentPlans": 3,
+  "months": 3,
+  "seed": 20
+}
+
+###
+
+### GET /transaction-series — recorrências das duas execuções (espera 200 OK com "meta.total": 7, todas "kind": "OPEN", "installments": null e "endDate": null)
+GET {{baseUrl}}/transaction-series?kind=OPEN&pageSize=50
+Authorization: Bearer {{tokenC}}
+
+###
+
+### GET /transaction-series — parcelamentos das duas execuções (espera 200 OK com "meta.total": 5, todos "kind": "CLOSED", "direction": "OUT", recorrência "MONTH" e "endDate" preenchido)
+GET {{baseUrl}}/transaction-series?kind=CLOSED&pageSize=50
+Authorization: Bearer {{tokenC}}
+
+###
+
+### GET /statement — mês atual até hoje (espera 200 OK com entradas "kind": "SCHEDULED"; as de data anterior a hoje com "status": "SETTLED" e "settledOn" = "expectedOn", as de hoje com "status": "PENDING" e "settledOn": null)
+# Repetir a requisição devolve os mesmos "id": as ocorrências até o fim do mês atual estão gravadas.
+GET {{baseUrl}}/statement?from={{$datetime 'YYYY-MM-01'}}&to={{$datetime 'YYYY-MM-DD'}}
+Authorization: Bearer {{tokenC}}
+
+###
+
+### GET /statement — nenhuma ocorrência pendente antes de hoje, desde o início do período (espera 200 OK com "data": [] e "meta.total": 0)
+GET {{baseUrl}}/statement?from={{$datetime 'YYYY-MM-01' -2 M}}&to={{$datetime 'YYYY-MM-DD' -1 d}}&status=PENDING
+Authorization: Bearer {{tokenC}}
+
+###
+
+### GET /statement — nenhuma ocorrência efetivada de hoje em diante (espera 200 OK com "data": [] e "meta.total": 0)
+GET {{baseUrl}}/statement?from={{$datetime 'YYYY-MM-DD'}}&to={{$datetime 'YYYY-MM-DD' 1 M}}&status=SETTLED
+Authorization: Bearer {{tokenC}}
+
+###
+
+### GET /statement — mês seguinte ao atual (espera 200 OK com entradas "kind": "SCHEDULED", todas "status": "PENDING" e "settledOn": null — geradas, não gravadas)
+# Repetir a requisição devolve outros "id": são ocorrências geradas sob demanda (id efêmero).
+# O intervalo vai até o dia 28 para valer em qualquer mês; as mensais do gerador caem entre os dias 1 e 28.
+# @name nextMonth
+GET {{baseUrl}}/statement?from={{$datetime 'YYYY-MM-01' 1 M}}&to={{$datetime 'YYYY-MM-28' 1 M}}
+Authorization: Bearer {{tokenC}}
+
+###
+
+### GET /scheduled-transactions/:seriesId/:occurrenceIndex — primeira ocorrência do mês seguinte não está gravada (espera 200 OK com "materialized": false)
+GET {{baseUrl}}/scheduled-transactions/{{nextMonth.response.body.$.data[0].seriesId}}/{{nextMonth.response.body.$.data[0].occurrenceIndex}}
+Authorization: Bearer {{tokenC}}
+
+###
+
+### GET /statement — mês anterior ao atual (espera 200 OK com todas as entradas "SETTLED" e cada par "seriesId" + "occurrenceIndex" uma única vez: a ocorrência gravada substitui a gerada)
+GET {{baseUrl}}/statement?from={{$datetime 'YYYY-MM-01' -1 M}}&to={{$datetime 'YYYY-MM-28' -1 M}}
+Authorization: Bearer {{tokenC}}
+
+###
+
+############################################################
+# Recurso desligado — EXIGE REINICIAR O BACKEND
+############################################################
+# Antes destas requisições: em apps/backend/.env, troque para DEV_TOOLS_ENABLED="false" (ou remova a linha)
+# e reinicie o backend. O token do usuário A continua válido. Ao terminar, volte para "true" e reinicie de novo.
+
+### GET /dev/data-generator/status — [REINICIAR COM A CHAVE DESLIGADA] (espera 404 com "message": ["DEV_DATA_DISABLED"])
+GET {{baseUrl}}/dev/data-generator/status
+Authorization: Bearer {{token}}
+
+###
+
+### POST /dev/data-generator/transactions — [REINICIAR COM A CHAVE DESLIGADA] corpo inválido é ignorado (espera 404 com "message": ["DEV_DATA_DISABLED"] e nada gravado)
+POST {{baseUrl}}/dev/data-generator/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "accounts": "abc",
+  "transactions": 9999
+}
+
+###
+
+### POST /dev/data-generator/series — [REINICIAR COM A CHAVE DESLIGADA] corpo válido (espera 404 com "message": ["DEV_DATA_DISABLED"] e nenhuma série nem ocorrência gravada)
+POST {{baseUrl}}/dev/data-generator/series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "recurrences": 1,
+  "installmentPlans": 1,
+  "months": 1
+}

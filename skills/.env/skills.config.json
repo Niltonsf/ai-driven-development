@@ -1,0 +1,6 @@
+{
+  "defaults": {
+    "namespace": "@poupig",
+    "sharedModulePath": "packages/shared"
+  }
+}

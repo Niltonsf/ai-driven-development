@@ -1,0 +1,630 @@
+@baseUrl = http://localhost:4000
+@password = #Senha123
+
+# Roteiro executável em ordem (Rest Client). Cada execução registra dois usuários novos
+# (e-mails com {{$guid}}), então os valores abaixo valem para uma execução completa.
+# A ocorrência é endereçada por /scheduled-transactions/:seriesId/:occurrenceIndex (índice base 0);
+# não existe POST nem listagem. O `id` de uma ocorrência ainda não gravada é efêmero: cada GET
+# gera outro, e ele só vale como payload da primeira gravação.
+# Erros seguem o formato do ApiExceptionFilter:
+# { "statusCode": 400|404, "error": "...", "message": ["CODIGO", ...], "path": "...", "timestamp": "..." }
+
+############################################################
+# Preparação — usuário A (dono da série)
+############################################################
+
+### POST /auth/register — registrar o usuário A (espera 201 Created)
+# @name registerA
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Usuario Agenda",
+  "email": "agenda.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário A (espera 200 OK com token)
+# @name loginA
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerA.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@token = {{loginA.response.body.$.token}}
+
+### POST /accounts — criar a conta do usuário A (espera 201 Created)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Conta Corrente",
+  "type": "CHECKING"
+}
+
+###
+
+### GET /accounts — capturar o id da conta do usuário A (espera 200 OK)
+# @name accountsA
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{token}}
+
+###
+
+@accountId = {{accountsA.response.body.$.items[0].id}}
+
+### POST /cards — criar o cartão do usuário A (espera 201 Created)
+POST {{baseUrl}}/cards
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Cartao Principal",
+  "brand": "VISA",
+  "closingDay": 5,
+  "dueDay": 12
+}
+
+###
+
+### GET /cards — capturar o id do cartão do usuário A (espera 200 OK)
+# @name cardsA
+GET {{baseUrl}}/cards
+Authorization: Bearer {{token}}
+
+###
+
+@creditCardId = {{cardsA.response.body.$.items[0].id}}
+
+### POST /categories/default — aplicar as categorias padrão do usuário A (espera 201 Created)
+POST {{baseUrl}}/categories/default
+Authorization: Bearer {{token}}
+
+###
+
+### GET /categories — capturar uma subcategoria do usuário A (espera 200 OK)
+# @name categoriesA
+GET {{baseUrl}}/categories
+Authorization: Bearer {{token}}
+
+###
+
+@subcategoryId = {{categoriesA.response.body.$[0].subcategories[0].id}}
+
+############################################################
+# Preparação — usuário B (outro dono, para os testes de posse)
+############################################################
+
+### POST /auth/register — registrar o usuário B (espera 201 Created)
+# @name registerB
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Outro Usuario",
+  "email": "outro.agenda.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário B (espera 200 OK)
+# @name loginB
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerB.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@tokenB = {{loginB.response.body.$.token}}
+
+### POST /accounts — criar a conta do usuário B (espera 201 Created)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+Authorization: Bearer {{tokenB}}
+
+{
+  "name": "Conta do Outro",
+  "type": "CASH"
+}
+
+###
+
+### GET /accounts — capturar o id da conta do usuário B (espera 200 OK)
+# @name accountsB
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{tokenB}}
+
+###
+
+@otherAccountId = {{accountsB.response.body.$.items[0].id}}
+
+############################################################
+# Série de origem
+############################################################
+
+### POST /transaction-series — parcelamento mensal de 12 no dia 10, início 2026-09-15.
+### Ocorrências: índice 0 = 2026-10-10 ... índice 11 = 2027-09-10
+### (espera 201 Created com { "id": "<uuid>" })
+# @name createInstallment
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Notebook parcelado",
+  "value": 250.5,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "creditCardId": "{{creditCardId}}",
+  "subcategoryId": "{{subcategoryId}}",
+  "kind": "CLOSED",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 10,
+  "startDate": "2026-09-15",
+  "installments": 12
+}
+
+###
+
+@seriesId = {{createInstallment.response.body.$.id}}
+
+############################################################
+# GET — abrir a ocorrência (gerada ou gravada)
+############################################################
+
+### GET /scheduled-transactions/:seriesId/0 — ocorrência ainda não gravada, nada é gravado
+### (espera 200 OK com "id" preenchido, "materialized": false, "status": "PENDING",
+### "occurrenceIndex": 0, "occurrenceOn": "2026-10-10", "expectedOn": "2026-10-10", "settledOn": null,
+### "value": 250.5 (número), "seriesName": "Notebook parcelado", "seriesKind": "CLOSED", "installments": 12,
+### accountName/creditCardName/subcategoryName/categoryName preenchidos e sem deletedAt)
+# @name occurrence0
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Authorization: Bearer {{token}}
+
+###
+
+@occurrence0Id = {{occurrence0.response.body.$.id}}
+
+### GET /scheduled-transactions/:seriesId/11 — última parcela
+### (espera 200 OK com "materialized": false e "occurrenceOn": "2027-09-10")
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/11
+Authorization: Bearer {{token}}
+
+###
+
+### GET /scheduled-transactions/:seriesId/12 — índice fora do parcelamento de 12
+### (espera 404 com "message": ["SCHEDULED_TRANSACTION_OCCURRENCE_NOT_FOUND"])
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/12
+Authorization: Bearer {{token}}
+
+###
+
+### GET /scheduled-transactions/:seriesId/abc — índice não numérico nunca vira 0: o domínio reprova
+### (espera 404 com "message": ["SCHEDULED_TRANSACTION_OCCURRENCE_NOT_FOUND"])
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/abc
+Authorization: Bearer {{token}}
+
+###
+
+### GET /scheduled-transactions/:seriesId/-1 — índice negativo
+### (espera 404 com "message": ["SCHEDULED_TRANSACTION_OCCURRENCE_NOT_FOUND"])
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/-1
+Authorization: Bearer {{token}}
+
+###
+
+### GET /scheduled-transactions/:seriesId/0 — série de outro usuário (token do usuário B)
+### (espera 404 com "message": ["SCHEDULED_TRANSACTION_SERIES_NOT_FOUND"])
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Authorization: Bearer {{tokenB}}
+
+###
+
+### GET /scheduled-transactions/:seriesId/0 — série inexistente
+### (espera 404 com "message": ["SCHEDULED_TRANSACTION_SERIES_NOT_FOUND"])
+GET {{baseUrl}}/scheduled-transactions/{{$guid}}/0
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# PUT — gravar a ocorrência (idempotente)
+############################################################
+
+### PUT /scheduled-transactions/:seriesId/0 — primeira gravação com o id recebido no GET e valor novo
+### (espera 200 OK com { "id": "<igual a occurrence0Id>" })
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{occurrence0Id}}",
+  "name": "Notebook parcelado",
+  "value": 300,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "creditCardId": "{{creditCardId}}",
+  "subcategoryId": "{{subcategoryId}}",
+  "status": "PENDING",
+  "expectedOn": "2026-10-10"
+}
+
+###
+
+### GET /scheduled-transactions/:seriesId/0 — agora é a gravada
+### (espera 200 OK com "id" igual a occurrence0Id, "materialized": true e "value": 300)
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Authorization: Bearer {{token}}
+
+###
+
+### PUT /scheduled-transactions/:seriesId/0 — gravação repetida cancelando a ocorrência
+### (espera 200 OK com o mesmo { "id": "<occurrence0Id>" })
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{occurrence0Id}}",
+  "name": "Notebook parcelado",
+  "value": 300,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "creditCardId": "{{creditCardId}}",
+  "subcategoryId": "{{subcategoryId}}",
+  "status": "CANCELED",
+  "expectedOn": "2026-10-10"
+}
+
+###
+
+### GET /statement — continua existindo uma única ocorrência gravada para o par
+### (espera 200 OK com uma só entrada "occurrenceIndex": 0 da série, "id" igual a occurrence0Id,
+### "status": "CANCELED" e "value": 300; "meta.total": 1)
+GET {{baseUrl}}/statement?from=2026-10-01&to=2026-10-31
+Authorization: Bearer {{token}}
+
+###
+
+### PUT /scheduled-transactions/:seriesId/0 — efetivar, com campos de identidade diferentes no corpo:
+### id, seriesId, occurrenceIndex, occurrenceOn e userId do corpo são ignorados
+### (espera 200 OK com { "id": "<occurrence0Id>" } — o id do corpo nunca renumera a linha gravada)
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{$guid}}",
+  "seriesId": "{{$guid}}",
+  "occurrenceIndex": 5,
+  "occurrenceOn": "2030-01-01",
+  "userId": "{{loginB.response.body.$.user.id}}",
+  "name": "Notebook parcelado",
+  "value": 300,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "creditCardId": "{{creditCardId}}",
+  "subcategoryId": "{{subcategoryId}}",
+  "status": "SETTLED",
+  "expectedOn": "2026-10-10",
+  "settledOn": "2026-10-10"
+}
+
+###
+
+### GET /scheduled-transactions/:seriesId/0 — a identidade veio da rota, da série e do token
+### (espera 200 OK com "id" igual a occurrence0Id, "seriesId" da rota, "occurrenceIndex": 0,
+### "occurrenceOn": "2026-10-10", "userId" do usuário A, "status": "SETTLED" e "settledOn": "2026-10-10")
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Authorization: Bearer {{token}}
+
+###
+
+### PUT /scheduled-transactions/:seriesId/0 — valor como string numérica
+### (espera 200 OK com { "id": "<occurrence0Id>" }; um novo GET traz "value": 310.25 e "status": "PENDING")
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{occurrence0Id}}",
+  "name": "Notebook parcelado",
+  "value": "310.25",
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-10-10"
+}
+
+###
+
+### GET /scheduled-transactions/:seriesId/0 — valor convertido e opcionais omitidos gravados como null
+### (espera 200 OK com "value": 310.25, "status": "PENDING", "creditCardId": null e "subcategoryId": null)
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Authorization: Bearer {{token}}
+
+###
+
+### GET /scheduled-transactions/:seriesId/2 — capturar o id efêmero da 3ª parcela
+### (espera 200 OK com "materialized": false e "occurrenceOn": "2026-12-10")
+# @name occurrence2
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/2
+Authorization: Bearer {{token}}
+
+###
+
+### PUT /scheduled-transactions/:seriesId/2 — mover a data prevista para outro mês
+### (espera 200 OK com { "id": "<id do occurrence2>" })
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/2
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{occurrence2.response.body.$.id}}",
+  "name": "Notebook parcelado",
+  "value": 250.5,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-10-01"
+}
+
+###
+
+### GET /scheduled-transactions/:seriesId/2 — datas puras sem deslocamento de fuso
+### (espera 200 OK com "materialized": true, "expectedOn": "2026-10-01" e "occurrenceOn": "2026-12-10")
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/2
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# PUT — falhas
+############################################################
+
+### PUT — efetivada sem data de efetivação
+### (espera 400 com "message": ["SCHEDULED_TRANSACTION_SETTLED_ON_REQUIRED"])
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{occurrence0Id}}",
+  "name": "Notebook parcelado",
+  "value": 300,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "status": "SETTLED",
+  "expectedOn": "2026-10-10"
+}
+
+###
+
+### PUT — valor não numérico nunca vira NaN gravado
+### (espera 400 com "message": ["INVALID_MONEY_AMOUNT"])
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{occurrence0Id}}",
+  "name": "Notebook parcelado",
+  "value": "abc",
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-10-10"
+}
+
+###
+
+### PUT — direção e situação fora do conjunto, repassadas cruas ao domínio
+### (espera 400 com "message": ["INVALID_DIRECTION", "INVALID_TRANSACTION_STATUS"])
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{occurrence0Id}}",
+  "name": "Notebook parcelado",
+  "value": 300,
+  "direction": "SIDEWAYS",
+  "accountId": "{{accountId}}",
+  "status": "WHATEVER",
+  "expectedOn": "2026-10-10"
+}
+
+###
+
+### PUT — data prevista inválida
+### (espera 400 com "message": ["INVALID_SCHEDULED_TRANSACTION_EXPECTED_ON"])
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{occurrence0Id}}",
+  "name": "Notebook parcelado",
+  "value": 300,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-13-40"
+}
+
+###
+
+### PUT — conta de outro usuário
+### (espera 400 com "message": ["SCHEDULED_TRANSACTION_ACCOUNT_NOT_FOUND"])
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{occurrence0Id}}",
+  "name": "Notebook parcelado",
+  "value": 300,
+  "direction": "OUT",
+  "accountId": "{{otherAccountId}}",
+  "expectedOn": "2026-10-10"
+}
+
+###
+
+### PUT — índice fora da série
+### (espera 404 com "message": ["SCHEDULED_TRANSACTION_OCCURRENCE_NOT_FOUND"])
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/12
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{$guid}}",
+  "name": "Notebook parcelado",
+  "value": 300,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2027-10-10"
+}
+
+###
+
+### PUT — série de outro usuário (token do usuário B)
+### (espera 404 com "message": ["SCHEDULED_TRANSACTION_SERIES_NOT_FOUND"])
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Content-Type: application/json
+Authorization: Bearer {{tokenB}}
+
+{
+  "id": "{{occurrence0Id}}",
+  "name": "Notebook parcelado",
+  "value": 1,
+  "direction": "OUT",
+  "accountId": "{{otherAccountId}}",
+  "expectedOn": "2026-10-10"
+}
+
+###
+
+############################################################
+# DELETE — reverter para a série
+############################################################
+
+### DELETE /scheduled-transactions/:seriesId/0 — outro usuário não reverte a ocorrência gravada de A
+### (espera 404 com "message": ["SCHEDULED_TRANSACTION_NOT_FOUND"])
+DELETE {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Authorization: Bearer {{tokenB}}
+
+###
+
+### DELETE /scheduled-transactions/:seriesId/0 — reverter a ocorrência gravada (remoção física)
+### (espera 200 OK com { "success": true })
+DELETE {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Authorization: Bearer {{token}}
+
+###
+
+### GET /scheduled-transactions/:seriesId/0 — de volta à ocorrência gerada, com os valores da série
+### (espera 200 OK com "materialized": false, "value": 250.5, "status": "PENDING", "settledOn": null,
+### "creditCardId"/"subcategoryId" da série e um "id" novo, diferente de occurrence0Id)
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Authorization: Bearer {{token}}
+
+###
+
+### DELETE /scheduled-transactions/:seriesId/0 — reverter de novo (já não está gravada)
+### (espera 404 com "message": ["SCHEDULED_TRANSACTION_NOT_FOUND"])
+DELETE {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Authorization: Bearer {{token}}
+
+###
+
+### DELETE /scheduled-transactions/:seriesId/5 — ocorrência que nunca foi gravada
+### (espera 404 com "message": ["SCHEDULED_TRANSACTION_NOT_FOUND"])
+DELETE {{baseUrl}}/scheduled-transactions/{{seriesId}}/5
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Sem criação nem listagem
+############################################################
+
+### POST /scheduled-transactions — rota inexistente
+### (espera 404 com "message": ["Cannot POST /scheduled-transactions"])
+POST {{baseUrl}}/scheduled-transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Nao existe"
+}
+
+###
+
+### GET /scheduled-transactions — sem listagem
+### (espera 404 com "message": ["Cannot GET /scheduled-transactions"])
+GET {{baseUrl}}/scheduled-transactions
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Série excluída
+############################################################
+
+### DELETE /transaction-series/:id — excluir logicamente a série (espera 200 OK com { "success": true })
+DELETE {{baseUrl}}/transaction-series/{{seriesId}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /scheduled-transactions/:seriesId/2 — a ocorrência gravada da série excluída não abre mais
+### (espera 404 com "message": ["SCHEDULED_TRANSACTION_SERIES_NOT_FOUND"])
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/2
+Authorization: Bearer {{token}}
+
+###
+
+### DELETE /scheduled-transactions/:seriesId/2 — nem pode ser revertida
+### (espera 404 com "message": ["SCHEDULED_TRANSACTION_NOT_FOUND"])
+DELETE {{baseUrl}}/scheduled-transactions/{{seriesId}}/2
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Sem token
+############################################################
+
+### GET /scheduled-transactions/:seriesId/0 sem token (espera 401 Unauthorized)
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+
+###
+
+### PUT /scheduled-transactions/:seriesId/0 sem token (espera 401 Unauthorized)
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Content-Type: application/json
+
+{
+  "id": "{{occurrence0Id}}",
+  "name": "Sem token",
+  "value": 10,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-10-10"
+}
+
+###
+
+### DELETE /scheduled-transactions/:seriesId/0 sem token (espera 401 Unauthorized)
+DELETE {{baseUrl}}/scheduled-transactions/{{seriesId}}/0

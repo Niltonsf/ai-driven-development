@@ -1,0 +1,600 @@
+@baseUrl = http://localhost:4000
+@password = #Senha123
+
+# Roteiro executável em ordem (Rest Client). Cada execução registra dois usuários novos
+# (e-mails com {{$guid}}), então os valores abaixo valem para uma execução completa.
+# GET /reports/cash-flow?reference=YYYY-MM&months=N devolve um array JSON, sem paginação e sem envelope,
+# com exatamente N itens em ordem crescente terminando no mês de referência:
+# [{ "month": "YYYY-MM", "inflow": 0, "outflow": 0, "balance": 0 }, ...]
+# Cada mês soma, pela data prevista: avulsas não excluídas, ocorrências gravadas de séries não excluídas
+# e ocorrências geradas das séries ativas ainda não gravadas; pendentes e efetivadas somam, canceladas não.
+# Os valores são números com até duas casas. "balance" = "inflow" - "outflow".
+# Erros seguem o formato do ApiExceptionFilter:
+# { "statusCode": 400|401, "error": "...", "message": ["CODIGO", ...], "path": "...", "timestamp": "..." }
+
+############################################################
+# Preparação — usuário A (dono do relatório)
+############################################################
+
+### POST /auth/register — registrar o usuário A (espera 201 Created)
+# @name registerA
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Usuario Relatorio",
+  "email": "relatorio.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário A (espera 200 OK com token)
+# @name loginA
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerA.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@token = {{loginA.response.body.$.token}}
+
+### POST /accounts — criar a conta do usuário A (espera 201 Created)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Conta Corrente",
+  "type": "CHECKING"
+}
+
+###
+
+### GET /accounts — capturar o id da conta do usuário A (espera 200 OK)
+# @name accountsA
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{token}}
+
+###
+
+@accountId = {{accountsA.response.body.$.items[0].id}}
+
+############################################################
+# Preparação — usuário B (tem movimento na mesma janela)
+############################################################
+
+### POST /auth/register — registrar o usuário B (espera 201 Created)
+# @name registerB
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Outro Usuario",
+  "email": "outro.relatorio.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário B (espera 200 OK)
+# @name loginB
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerB.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@tokenB = {{loginB.response.body.$.token}}
+
+### POST /accounts — criar a conta do usuário B (espera 201 Created)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+Authorization: Bearer {{tokenB}}
+
+{
+  "name": "Conta do Outro",
+  "type": "CASH"
+}
+
+###
+
+### GET /accounts — capturar o id da conta do usuário B (espera 200 OK)
+# @name accountsB
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{tokenB}}
+
+###
+
+@otherAccountId = {{accountsB.response.body.$.items[0].id}}
+
+### POST /transactions — entrada avulsa do usuário B em setembro (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{tokenB}}
+
+{
+  "name": "Salario do Outro",
+  "value": 9999,
+  "direction": "IN",
+  "accountId": "{{otherAccountId}}",
+  "expectedOn": "2026-09-10"
+}
+
+###
+
+### POST /transaction-series — série mensal sem fim do usuário B, no dia 10, início 2026-09-01
+### (espera 201 Created com { "id": "<uuid>" })
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{tokenB}}
+
+{
+  "name": "Assinatura do Outro",
+  "value": 555,
+  "direction": "OUT",
+  "accountId": "{{otherAccountId}}",
+  "kind": "OPEN",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 10,
+  "startDate": "2026-09-01"
+}
+
+###
+
+############################################################
+# Janela sem movimento
+############################################################
+
+### GET /reports/cash-flow — 24 meses de um usuário sem nada gravado
+### (espera 200 OK com um array de 24 itens, de "2024-10" a "2026-09", todos com
+### "inflow": 0, "outflow": 0 e "balance": 0; [0] "month": "2024-10"; [23] "month": "2026-09")
+GET {{baseUrl}}/reports/cash-flow?reference=2026-09&months=24
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/cash-flow — 6 meses: o mês de referência é o último e entra na janela
+### (espera 200 OK com 6 itens: "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09",
+### todos zerados)
+GET {{baseUrl}}/reports/cash-flow?reference=2026-09&months=6
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Transações avulsas
+############################################################
+
+### POST /transactions — entrada efetivada em setembro (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Salario",
+  "value": 5000,
+  "direction": "IN",
+  "accountId": "{{accountId}}",
+  "status": "SETTLED",
+  "expectedOn": "2026-09-05",
+  "settledOn": "2026-09-05"
+}
+
+###
+
+### POST /transactions — entrada pendente em setembro, com centavos (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Freela",
+  "value": 1200.55,
+  "direction": "IN",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-09-20"
+}
+
+###
+
+### POST /transactions — saída pendente no último dia de setembro (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Aluguel",
+  "value": 1800,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-09-30"
+}
+
+###
+
+### POST /transactions — entrada pendente no primeiro dia de outubro (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Bonus",
+  "value": 750.25,
+  "direction": "IN",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-10-01"
+}
+
+###
+
+### POST /transactions — saída cancelada em setembro, nunca soma (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Cinema",
+  "value": 80,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "status": "CANCELED",
+  "expectedOn": "2026-09-12"
+}
+
+###
+
+### POST /transactions — saída em setembro que será excluída (espera 201 Created com { "id": "<uuid>" })
+# @name createGift
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Presente",
+  "value": 300,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-09-15"
+}
+
+###
+
+### DELETE /transactions/:id — excluir logicamente a saída "Presente" (espera 200 OK com { "success": true })
+DELETE {{baseUrl}}/transactions/{{createGift.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/cash-flow — setembro como referência: a saída de 2026-09-30 fica em setembro e a
+### entrada de 2026-10-01 fica fora da janela
+### (espera 200 OK com 6 itens de "2026-04" a "2026-09"; de "2026-04" a "2026-08" zerados;
+### [5] { "month": "2026-09", "inflow": 6200.55, "outflow": 1800, "balance": 4400.55 }
+### — efetivada (5000) e pendente (1200.55) somam; "Cinema" (cancelada) e "Presente" (excluída) não)
+GET {{baseUrl}}/reports/cash-flow?reference=2026-09&months=6
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/cash-flow — outubro como referência: a entrada de 2026-10-01 cai em outubro
+### (espera 200 OK com 6 itens de "2026-05" a "2026-10";
+### [4] { "month": "2026-09", "inflow": 6200.55, "outflow": 1800, "balance": 4400.55 };
+### [5] { "month": "2026-10", "inflow": 750.25, "outflow": 0, "balance": 750.25 })
+GET {{baseUrl}}/reports/cash-flow?reference=2026-10&months=6
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Série criada sem nada gravado
+############################################################
+
+### POST /transaction-series — parcelamento mensal de 4 no dia 10, início 2026-09-15.
+### Ocorrências: índice 0 = 2026-10-10, 1 = 2026-11-10, 2 = 2026-12-10, 3 = 2027-01-10
+### (espera 201 Created com { "id": "<uuid>" })
+# @name createInstallment
+POST {{baseUrl}}/transaction-series
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Celular parcelado",
+  "value": 250.5,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "kind": "CLOSED",
+  "unit": "MONTH",
+  "interval": 1,
+  "dayOfMonth": 10,
+  "startDate": "2026-09-15",
+  "installments": 4
+}
+
+###
+
+@seriesId = {{createInstallment.response.body.$.id}}
+
+### GET /reports/cash-flow — 12 meses até 2027-03: cada mês com parcela soma o valor da série, sem
+### nenhuma ocorrência gravada, e o parcelamento para na 4ª parcela
+### (espera 200 OK com 12 itens de "2026-04" a "2027-03"; de "2026-04" a "2026-08" zerados;
+### [5]  { "month": "2026-09", "inflow": 6200.55, "outflow": 1800,  "balance": 4400.55 };
+### [6]  { "month": "2026-10", "inflow": 750.25,  "outflow": 250.5, "balance": 499.75 };
+### [7]  { "month": "2026-11", "inflow": 0,       "outflow": 250.5, "balance": -250.5 };
+### [8]  { "month": "2026-12", "inflow": 0,       "outflow": 250.5, "balance": -250.5 };
+### [9]  { "month": "2027-01", "inflow": 0,       "outflow": 250.5, "balance": -250.5 };
+### [10] { "month": "2027-02", "inflow": 0, "outflow": 0, "balance": 0 };
+### [11] { "month": "2027-03", "inflow": 0, "outflow": 0, "balance": 0 })
+GET {{baseUrl}}/reports/cash-flow?reference=2027-03&months=12
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Ocorrência gravada com valor alterado
+############################################################
+
+### GET /scheduled-transactions/:seriesId/0 — capturar o id efêmero da 1ª parcela
+### (espera 200 OK com "materialized": false e "occurrenceOn": "2026-10-10")
+# @name occurrence0
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Authorization: Bearer {{token}}
+
+###
+
+@occurrence0Id = {{occurrence0.response.body.$.id}}
+
+### PUT /scheduled-transactions/:seriesId/0 — gravar a 1ª parcela com valor 300
+### (espera 200 OK com { "id": "<occurrence0Id>" })
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{occurrence0Id}}",
+  "name": "Celular parcelado",
+  "value": 300,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "status": "PENDING",
+  "expectedOn": "2026-10-10"
+}
+
+###
+
+### GET /reports/cash-flow — outubro soma o valor gravado uma única vez (300, e não 300 + 250.5)
+### (espera 200 OK com 12 itens; [6] { "month": "2026-10", "inflow": 750.25, "outflow": 300,
+### "balance": 450.25 }; os demais meses iguais à consulta anterior)
+GET {{baseUrl}}/reports/cash-flow?reference=2027-03&months=12
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Ocorrência movida para o mês seguinte
+############################################################
+
+### GET /scheduled-transactions/:seriesId/1 — capturar o id efêmero da 2ª parcela
+### (espera 200 OK com "materialized": false e "occurrenceOn": "2026-11-10")
+# @name occurrence1
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/1
+Authorization: Bearer {{token}}
+
+###
+
+### PUT /scheduled-transactions/:seriesId/1 — mover de 2026-11-10 para 2026-12-05
+### (espera 200 OK com { "id": "<id do occurrence1>" })
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{occurrence1.response.body.$.id}}",
+  "name": "Celular parcelado",
+  "value": 250.5,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-12-05"
+}
+
+###
+
+### GET /reports/cash-flow — novembro perde a parcela (não é regerada) e dezembro soma a movida
+### mais a 3ª parcela gerada
+### (espera 200 OK com 12 itens;
+### [7] { "month": "2026-11", "inflow": 0, "outflow": 0, "balance": 0 };
+### [8] { "month": "2026-12", "inflow": 0, "outflow": 501, "balance": -501 })
+GET {{baseUrl}}/reports/cash-flow?reference=2027-03&months=12
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Ocorrência gravada cancelada
+############################################################
+
+### GET /scheduled-transactions/:seriesId/2 — capturar o id efêmero da 3ª parcela
+### (espera 200 OK com "materialized": false e "occurrenceOn": "2026-12-10")
+# @name occurrence2
+GET {{baseUrl}}/scheduled-transactions/{{seriesId}}/2
+Authorization: Bearer {{token}}
+
+###
+
+### PUT /scheduled-transactions/:seriesId/2 — gravar a 3ª parcela já cancelada
+### (espera 200 OK com { "id": "<id do occurrence2>" })
+PUT {{baseUrl}}/scheduled-transactions/{{seriesId}}/2
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "{{occurrence2.response.body.$.id}}",
+  "name": "Celular parcelado",
+  "value": 250.5,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "status": "CANCELED",
+  "expectedOn": "2026-12-10"
+}
+
+###
+
+### GET /reports/cash-flow — a cancelada não soma e não reaparece gerada como pendente
+### (espera 200 OK com 12 itens; [8] { "month": "2026-12", "inflow": 0, "outflow": 250.5,
+### "balance": -250.5 } — só a parcela movida de novembro)
+GET {{baseUrl}}/reports/cash-flow?reference=2027-03&months=12
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Comparação com o extrato de dois meses da janela
+############################################################
+
+### GET /statement — outubro
+### (espera 200 OK com "meta.total": 2 e "data": [0] a parcela "occurrenceIndex": 0 (OUT, 300, PENDING,
+### "expectedOn": "2026-10-10"); [1] "Bonus" (IN, 750.25, PENDING, "expectedOn": "2026-10-01").
+### Somando as não canceladas: entradas 750.25 e saídas 300 — iguais ao
+### "inflow"/"outflow" de "2026-10" no relatório acima)
+GET {{baseUrl}}/statement?from=2026-10-01&to=2026-10-31
+Authorization: Bearer {{token}}
+
+###
+
+### GET /statement — dezembro
+### (espera 200 OK com "meta.total": 2 e "data": [0] "occurrenceIndex": 2 (OUT, 250.5, "status": "CANCELED",
+### "expectedOn": "2026-12-10"); [1] "occurrenceIndex": 1 (OUT, 250.5, PENDING, "expectedOn": "2026-12-05").
+### Somando as não canceladas:
+### entradas 0 e saídas 250.5 — iguais ao "inflow"/"outflow" de "2026-12" no relatório acima)
+GET {{baseUrl}}/statement?from=2026-12-01&to=2026-12-31
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Ocorrência revertida volta a ser gerada
+############################################################
+
+### DELETE /scheduled-transactions/:seriesId/0 — reverter a 1ª parcela (espera 200 OK com { "success": true })
+DELETE {{baseUrl}}/scheduled-transactions/{{seriesId}}/0
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/cash-flow — outubro volta a somar o valor da série
+### (espera 200 OK com 12 itens;
+### [5]  { "month": "2026-09", "inflow": 6200.55, "outflow": 1800,  "balance": 4400.55 };
+### [6]  { "month": "2026-10", "inflow": 750.25,  "outflow": 250.5, "balance": 499.75 };
+### [7]  { "month": "2026-11", "inflow": 0,       "outflow": 0,     "balance": 0 };
+### [8]  { "month": "2026-12", "inflow": 0,       "outflow": 250.5, "balance": -250.5 };
+### [9]  { "month": "2027-01", "inflow": 0,       "outflow": 250.5, "balance": -250.5 };
+### [10] e [11] zerados)
+GET {{baseUrl}}/reports/cash-flow?reference=2027-03&months=12
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Dados de outro usuário
+############################################################
+
+### GET /reports/cash-flow — o relatório de A ignora a entrada de 9999 e a série de 555 do usuário B
+### (espera 200 OK com 6 itens de "2026-07" a "2026-12"; "2026-07", "2026-08" e "2026-11" zerados;
+### [2] { "month": "2026-09", "inflow": 6200.55, "outflow": 1800,  "balance": 4400.55 };
+### [3] { "month": "2026-10", "inflow": 750.25,  "outflow": 250.5, "balance": 499.75 };
+### [5] { "month": "2026-12", "inflow": 0,       "outflow": 250.5, "balance": -250.5 };
+### nenhum mês com 9999 ou 555)
+GET {{baseUrl}}/reports/cash-flow?reference=2026-12&months=6
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/cash-flow — o relatório de B só enxerga os dados de B
+### (espera 200 OK com 6 itens de "2026-07" a "2026-12"; "2026-07" e "2026-08" zerados;
+### [2] { "month": "2026-09", "inflow": 9999, "outflow": 555, "balance": 9444 };
+### [3], [4] e [5] { "inflow": 0, "outflow": 555, "balance": -555 })
+GET {{baseUrl}}/reports/cash-flow?reference=2026-12&months=6
+Authorization: Bearer {{tokenB}}
+
+###
+
+############################################################
+# Série excluída
+############################################################
+
+### DELETE /transaction-series/:id — exclusão lógica (espera 200 OK com { "success": true })
+DELETE {{baseUrl}}/transaction-series/{{seriesId}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/cash-flow — nem as gravadas (movida e cancelada) nem as geradas da série entram
+### (espera 200 OK com 12 itens; sobram só as avulsas:
+### [5] { "month": "2026-09", "inflow": 6200.55, "outflow": 1800, "balance": 4400.55 };
+### [6] { "month": "2026-10", "inflow": 750.25, "outflow": 0, "balance": 750.25 };
+### todos os outros meses zerados)
+GET {{baseUrl}}/reports/cash-flow?reference=2027-03&months=12
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Janela e referência inválidas
+############################################################
+
+### GET /reports/cash-flow com months=7 (espera 400 com "message": ["INVALID_REPORT_WINDOW"])
+GET {{baseUrl}}/reports/cash-flow?reference=2026-09&months=7
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/cash-flow com months=0 (espera 400 com "message": ["INVALID_REPORT_WINDOW"])
+GET {{baseUrl}}/reports/cash-flow?reference=2026-09&months=0
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/cash-flow sem months (espera 400 com "message": ["INVALID_REPORT_WINDOW"])
+GET {{baseUrl}}/reports/cash-flow?reference=2026-09
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/cash-flow com months vazio (espera 400 com "message": ["INVALID_REPORT_WINDOW"])
+GET {{baseUrl}}/reports/cash-flow?reference=2026-09&months=
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/cash-flow com months não numérico (espera 400 com "message": ["INVALID_REPORT_WINDOW"])
+GET {{baseUrl}}/reports/cash-flow?reference=2026-09&months=doze
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/cash-flow sem reference (espera 400 com "message": ["INVALID_REPORT_REFERENCE"])
+GET {{baseUrl}}/reports/cash-flow?months=12
+Authorization: Bearer {{token}}
+
+###
+
+### GET /reports/cash-flow com reference=2026-13 (espera 400 com "message": ["INVALID_REPORT_REFERENCE"])
+GET {{baseUrl}}/reports/cash-flow?reference=2026-13&months=12
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Sem token
+############################################################
+
+### GET /reports/cash-flow sem token (espera 401 Unauthorized)
+GET {{baseUrl}}/reports/cash-flow?reference=2026-09&months=12

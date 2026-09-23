@@ -1,0 +1,38 @@
+// Prisma models for module: category
+
+model Category {
+  id        String    @id
+  userId    String    @map("user_id")
+  name      String
+  icon      String?
+  color     String?
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subcategories Subcategory[]
+
+  @@map("category")
+}
+
+model Subcategory {
+  id         String    @id
+  categoryId String    @map("category_id")
+  name       String
+  icon       String?
+  color      String?
+  isActive   Boolean   @default(true) @map("is_active")
+  order      Int
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  transactionSeries TransactionSeries[]
+  scheduledTransactions ScheduledTransaction[]
+
+  @@map("subcategory")
+}

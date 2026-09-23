@@ -1,0 +1,1814 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Flow do Projeto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<style>
+  :root {
+    color-scheme: light only;
+
+    /* superfícies */
+    --bg: #f7f7f5;
+    --card: #ffffff;
+    --fill: #f0f0ee;
+    --fill-strong: #e6e6e3;
+    --thumb: #ffffff;
+    --sep: rgba(0, 0, 0, 0.07);
+
+    /* tinta */
+    --ink: #1d1d1f;
+    --ink-2: #6e6e73;
+    --ink-3: #8e8e93;
+
+    /* cor */
+    --accent: #0071e3;
+    --accent-tint: rgba(0, 113, 227, 0.09);
+    --ok: #1a8f4a;
+    --warn: #a85b00;
+    --warn-tint: rgba(255, 159, 10, 0.12);
+    --warn-line: rgba(255, 159, 10, 0.34);
+    --danger: #d70015;
+
+    /* sombra */
+    --lift: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 20px rgba(0, 0, 0, 0.05);
+    --lift-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+
+    /* raio */
+    --r-card: 16px;
+    --r-ctl: 10px;
+    --r-seg: 9px;
+
+    --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+  }
+
+  @media (prefers-contrast: more) {
+    :root { --sep: rgba(0,0,0,.24); --ink-2: #4a4a4f; --ink-3: #5c5c61; }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 1rem;
+    line-height: 1.5;
+    letter-spacing: -0.004em;
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .page { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1rem 6rem; }
+
+  /* ---------- cabeçalho ---------- */
+
+  header { margin-bottom: 1.75rem; }
+  .eyebrow {
+    font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em;
+    color: var(--accent); margin: 0 0 0.5rem;
+  }
+  h1 {
+    font-size: clamp(1.9rem, 5.5vw, 2.6rem); font-weight: 600;
+    line-height: 1.06; letter-spacing: -0.024em;
+    margin: 0 0 0.6rem; text-wrap: balance;
+  }
+  .lede {
+    color: var(--ink-2); margin: 0; max-width: 48ch;
+    font-size: 1.0625rem; line-height: 1.5; letter-spacing: -0.008em;
+  }
+
+  /* ---------- barra ---------- */
+
+  .bar {
+    position: sticky; top: max(env(safe-area-inset-top, 0px), 0.5rem); z-index: 20;
+    background: rgba(255, 255, 255, 0.74);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--sep); border-radius: 14px; box-shadow: var(--lift);
+    padding: 0.625rem 0.75rem 0.75rem; margin-bottom: 2rem;
+    display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .bar { background: var(--card); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
+
+  .bar-label { font-size: 0.8125rem; color: var(--ink-3); font-weight: 500; padding-left: 0.25rem; }
+
+  select {
+    appearance: none;
+    font: inherit; font-size: 0.9375rem; font-weight: 500; color: var(--ink);
+    background: var(--fill);
+    background-image: linear-gradient(45deg, transparent 50%, var(--ink-3) 50%),
+                      linear-gradient(135deg, var(--ink-3) 50%, transparent 50%);
+    background-position: right 0.95rem center, right 0.7rem center;
+    background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+    border: none; border-radius: var(--r-ctl);
+    padding: 0.4rem 1.9rem 0.4rem 0.7rem;
+    flex: 1 1 10rem; min-width: 0; cursor: pointer;
+  }
+
+  .status {
+    font-size: 0.8125rem; color: var(--ink-3); margin-left: auto; white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 0.35rem;
+  }
+  .status::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor; opacity: 0.65;
+  }
+  .status:empty::before { display: none; }
+  .status.saved { color: var(--ok); }
+  .status.warn { color: var(--warn); }
+
+  .progress {
+    flex: 1 1 100%; height: 3px; border-radius: 999px;
+    background: var(--fill-strong); overflow: hidden;
+  }
+  .progress > div {
+    height: 100%; width: 0; border-radius: 999px; background: var(--accent);
+    transition: width 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* ---------- botões ---------- */
+
+  button {
+    font: inherit; font-size: 0.875rem; font-weight: 500;
+    color: var(--ink); background: var(--fill);
+    border: none; border-radius: var(--r-ctl);
+    padding: 0.4rem 0.8rem; cursor: pointer;
+    transition: background 0.18s ease, transform 0.1s ease-out, color 0.18s ease;
+  }
+  button:hover { background: var(--fill-strong); }
+  button:active { transform: scale(0.97); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.primary {
+    background: var(--accent); color: #fff;
+    padding: 0.5rem 1.1rem; border-radius: 999px;
+  }
+  button.primary:hover { filter: brightness(1.08); background: var(--accent); }
+  button.danger { background: transparent; color: var(--ink-3); padding: 0.3rem 0.55rem; }
+  button.danger:hover { background: var(--fill); color: var(--danger); }
+
+  /* ---------- seções e cartões ---------- */
+
+  section { margin-bottom: 2.25rem; }
+
+  .sec-head { padding: 0 0.25rem; margin-bottom: 0.75rem; }
+  .sec-head h2 {
+    font-size: 1.3125rem; font-weight: 600; letter-spacing: -0.018em;
+    margin: 0 0 0.2rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  }
+  .sec-head .hint {
+    margin: 0; color: var(--ink-2); font-size: 0.875rem; line-height: 1.45; max-width: 60ch;
+  }
+  .tag {
+    font-size: 0.6875rem; font-weight: 500; color: var(--accent);
+    background: var(--accent-tint); border-radius: 999px;
+    padding: 0.15rem 0.5rem; white-space: nowrap;
+  }
+
+  .card {
+    background: var(--card); border-radius: var(--r-card);
+    box-shadow: var(--lift); overflow: hidden;
+  }
+
+  /* ---------- linhas de pergunta ---------- */
+
+  .row { position: relative; padding: 0.875rem 1rem; }
+  .row + .row::before {
+    content: ""; position: absolute; top: 0; left: 1rem; right: 0;
+    height: 1px; background: var(--sep);
+  }
+  .row-main { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; align-items: flex-start; }
+  .row-text { flex: 1 1 16rem; min-width: 0; }
+  .row-control { flex: 0 0 auto; }
+  .row-control.wide { flex: 1 1 100%; }
+
+  .ask { margin: 0; font-size: 0.9375rem; font-weight: 500; letter-spacing: -0.008em; line-height: 1.4; }
+  .why { margin: 0.2rem 0 0; font-size: 0.8125rem; color: var(--ink-2); line-height: 1.4; letter-spacing: 0; }
+  .eg { margin: 0.3rem 0 0; font-size: 0.8125rem; color: var(--ink-3); line-height: 1.4; letter-spacing: 0; }
+  .eg b { font-weight: 600; color: var(--ink-2); }
+
+  .help {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.15rem; height: 1.15rem; padding: 0; margin-left: 0.35rem;
+    border-radius: 50%; background: var(--fill); color: var(--ink-3);
+    font-size: 0.6875rem; font-weight: 700; line-height: 1; vertical-align: 0.06em;
+  }
+  .help:hover { background: var(--accent-tint); color: var(--accent); }
+
+  textarea, input[type="text"] {
+    font: inherit; font-size: 0.9375rem; color: var(--ink);
+    background: var(--fill); border: 1px solid transparent;
+    border-radius: var(--r-ctl); padding: 0.55rem 0.7rem; width: 100%;
+    transition: background 0.18s ease, border-color 0.18s ease;
+  }
+  textarea::placeholder, input::placeholder { color: var(--ink-3); }
+  textarea { resize: vertical; min-height: 4.5rem; line-height: 1.45; display: block; }
+  textarea:focus, input[type="text"]:focus {
+    outline: none; background: var(--card); border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-tint);
+  }
+
+  .seg { display: inline-flex; background: var(--fill); border-radius: var(--r-seg); padding: 2px; gap: 2px; }
+  .seg button {
+    background: transparent; border-radius: 7px; padding: 0.3rem 0.85rem;
+    font-size: 0.8125rem; font-weight: 500; color: var(--ink-2); min-width: 3.4rem;
+  }
+  .seg button:hover { background: transparent; color: var(--ink); }
+  .seg button[aria-pressed="true"] {
+    background: var(--thumb); color: var(--ink); font-weight: 600; box-shadow: var(--lift-sm);
+  }
+
+  .opts { display: flex; flex-direction: column; gap: 0.375rem; width: 100%; }
+  .opts button {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+    text-align: left; background: var(--fill); border: 1px solid transparent;
+    border-radius: var(--r-ctl); padding: 0.55rem 0.75rem;
+    font-size: 0.875rem; font-weight: 400; line-height: 1.35;
+  }
+  .opts button .tick { opacity: 0; color: var(--accent); font-weight: 600; }
+  .opts button[aria-pressed="true"] {
+    background: var(--accent-tint);
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    color: var(--ink); font-weight: 500;
+  }
+  .opts button[aria-pressed="true"] .tick { opacity: 1; }
+
+  /* ---------- áreas do negócio ---------- */
+
+  .sub { margin-bottom: 0.75rem; }
+  .sub-head { display: flex; align-items: center; gap: 0.5rem; padding: 0.625rem 0.75rem 0.625rem 0.5rem; }
+  .sub.open .sub-head { box-shadow: inset 0 -1px 0 var(--sep); }
+  .chev {
+    background: transparent; color: var(--ink-3); padding: 0.25rem 0.35rem;
+    line-height: 1; border-radius: 8px;
+  }
+  .chev:hover { background: var(--fill); color: var(--ink); }
+  .chev svg { display: block; transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1); }
+  .sub.open .chev svg { transform: rotate(90deg); }
+
+  .sub-name {
+    flex: 1 1 8rem; min-width: 0; width: auto;
+    font-size: 1rem; font-weight: 600; letter-spacing: -0.012em;
+    background: transparent; border-color: transparent; padding: 0.3rem 0.45rem;
+  }
+  .sub-name:hover { background: var(--fill); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .chip {
+    font-size: 0.6875rem; font-weight: 500; white-space: nowrap;
+    border-radius: 999px; padding: 0.15rem 0.5rem;
+    background: var(--fill); color: var(--ink-2);
+  }
+  .chip.on { background: var(--accent-tint); color: var(--accent); }
+  .chip.flag { background: var(--warn-tint); color: var(--warn); }
+
+  .sub-body { padding-bottom: 0.25rem; }
+  .grp {
+    display: flex; align-items: baseline; gap: 0.4rem; flex-wrap: wrap;
+    padding: 1rem 1rem 0.35rem;
+    font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.04em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .grp .note {
+    text-transform: none; letter-spacing: 0; font-weight: 400;
+    font-size: 0.75rem; color: var(--ink-3);
+  }
+  .verdict {
+    margin: 0; padding: 0.7rem 1rem; font-size: 0.875rem; line-height: 1.45;
+    color: var(--ink-2); background: var(--fill); box-shadow: inset 0 1px 0 var(--sep);
+  }
+  .verdict strong { color: var(--ink); font-weight: 600; }
+  .verdict.gray { background: var(--warn-tint); color: var(--warn); }
+  .verdict.gray strong { color: var(--warn); }
+
+  .flags { padding: 0.5rem 1rem 0.875rem; }
+  .flag-item {
+    display: flex; gap: 0.6rem; align-items: flex-start;
+    background: var(--warn-tint); border: 1px solid var(--warn-line);
+    border-radius: 12px; padding: 0.6rem 0.75rem;
+    font-size: 0.8125rem; line-height: 1.45; color: var(--ink);
+  }
+  .flag-item + .flag-item { margin-top: 0.4rem; }
+  .flag-item::before { content: "!"; color: var(--warn); font-weight: 700; line-height: 1.45; }
+
+  .empty {
+    background: var(--card); border-radius: var(--r-card); box-shadow: var(--lift);
+    padding: 1.5rem 1.25rem; color: var(--ink-2); font-size: 0.9375rem;
+    text-align: center; max-width: 46ch; margin: 0 auto 0.75rem;
+  }
+
+  .addbar { display: flex; gap: 0.75rem; align-items: center; margin-top: 0.75rem; padding: 0 0.25rem; }
+  .addbar .count { font-size: 0.8125rem; color: var(--ink-3); }
+
+  /* ---------- resumo ---------- */
+
+  .sum-empty { padding: 1.25rem 1rem; color: var(--ink-2); font-size: 0.9375rem; margin: 0; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.875rem; min-width: 36rem; }
+  th, td { text-align: left; padding: 0.65rem 0.75rem; vertical-align: top; }
+  th:first-child, td:first-child { padding-left: 1rem; }
+  th {
+    font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.04em;
+    text-transform: uppercase; color: var(--ink-3);
+    box-shadow: inset 0 -1px 0 var(--sep); white-space: nowrap;
+  }
+  tbody tr + tr td { box-shadow: inset 0 1px 0 var(--sep); }
+  td:first-child { font-weight: 600; letter-spacing: -0.008em; }
+  td.dim { color: var(--ink-3); }
+
+  .sum-block { padding: 1rem; box-shadow: inset 0 1px 0 var(--sep); }
+  .sum-block h3 {
+    margin: 0 0 0.6rem; font-size: 0.6875rem; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3);
+  }
+  .sum-block ul { margin: 0; padding: 0; list-style: none; }
+  .open-list li {
+    display: flex; gap: 0.55rem; padding: 0.3rem 0;
+    color: var(--ink-2); font-size: 0.875rem; line-height: 1.45;
+  }
+  .open-list li::before {
+    content: ""; flex: 0 0 auto; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--ink-3); margin-top: 0.55rem;
+  }
+  .open-list li b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- glossário ---------- */
+
+  .gloss { position: relative; padding: 0.75rem 1rem; }
+  .gloss + .gloss::before {
+    content: ""; position: absolute; top: 0; left: 1rem; right: 0;
+    height: 1px; background: var(--sep);
+  }
+  .gloss dt { margin: 0; font-size: 0.875rem; font-weight: 600; letter-spacing: -0.008em; }
+  .gloss dd { margin: 0.1rem 0 0; font-size: 0.8125rem; color: var(--ink-2); line-height: 1.45; }
+
+  /* ---------- modal de exemplos ---------- */
+
+  dialog#eg-modal {
+    width: min(34rem, calc(100vw - 2rem)); max-height: min(80vh, 44rem);
+    padding: 0; border: none; border-radius: 20px;
+    background: var(--card); color: var(--ink);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+  }
+  dialog#eg-modal::backdrop {
+    background: rgba(0, 0, 0, 0.3);
+    -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+  }
+  .eg-head {
+    display: flex; gap: 0.75rem; align-items: flex-start;
+    padding: 1.125rem 1.125rem 0.875rem; box-shadow: inset 0 -1px 0 var(--sep);
+  }
+  .eg-head h2 { margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: -0.012em; line-height: 1.35; flex: 1; }
+  .eg-head .kicker {
+    display: block; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.04em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 0.25rem;
+  }
+  .eg-close {
+    flex: 0 0 auto; width: 1.75rem; height: 1.75rem; padding: 0;
+    border-radius: 50%; background: var(--fill); color: var(--ink-2);
+    font-size: 0.9375rem; line-height: 1;
+  }
+  .eg-body { overflow-y: auto; max-height: calc(80vh - 10rem); padding: 0.25rem 0; }
+  .eg-case { position: relative; padding: 0.75rem 1.125rem; }
+  .eg-case + .eg-case::before {
+    content: ""; position: absolute; top: 0; left: 1.125rem; right: 0;
+    height: 1px; background: var(--sep);
+  }
+  .eg-domain { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.03em; color: var(--accent); margin: 0 0 0.15rem; }
+  .eg-text { margin: 0; font-size: 0.9375rem; line-height: 1.45; }
+  .eg-foot {
+    margin: 0; padding: 0.875rem 1.125rem; box-shadow: inset 0 1px 0 var(--sep);
+    font-size: 0.75rem; line-height: 1.45; color: var(--ink-3); background: var(--bg);
+  }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; padding: 0 0.25rem; }
+  .actions .hintline { font-size: 0.8125rem; color: var(--ink-3); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    button:active { transform: none; }
+  }
+
+  @media (max-width: 34rem) {
+    .page { padding-top: 1.75rem; }
+    .status { margin-left: 0; }
+    .row-control { flex: 1 1 100%; }
+    .seg { width: 100%; }
+    .seg button { flex: 1; min-width: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header>
+    <p class="eyebrow">Desenho guiado pelo negócio</p>
+    <h1>Flow do Projeto</h1>
+    <p class="lede">Todo negócio tem uma atividade principal. Dentro dela existem várias áreas menores, e cada área precisa das suas próprias respostas. O que ficar em branco vira uma pergunta para levar a quem entende do negócio.</p>
+  </header>
+
+  <div class="bar">
+    <span class="bar-label" id="project-label">Projeto</span>
+    <select id="project" aria-labelledby="project-label"></select>
+    <button id="new-project">Novo</button>
+    <button id="rename-project">Renomear</button>
+    <span class="status" id="status">carregando…</span>
+    <div class="progress"><div id="progress-bar"></div></div>
+  </div>
+
+  <section id="phase-project">
+    <div class="sec-head">
+      <h2>1. O negócio <span class="tag">preenche uma vez</span></h2>
+      <p class="hint">Estas quatro respostas valem para todas as áreas de baixo.</p>
+    </div>
+    <div class="card" id="project-card"></div>
+  </section>
+
+  <section id="phase-subs">
+    <div class="sec-head">
+      <h2>2. As áreas do negócio</h2>
+      <p class="hint">Uma linha por área. Área é um conjunto de ações que andam juntas, feitas pela mesma pessoa, mexendo nos mesmos dados. Cada área responde as suas próprias perguntas e pode acabar diferente das outras.</p>
+    </div>
+    <div id="sub-list"></div>
+    <div class="addbar">
+      <button class="primary" id="add-sub">Adicionar área</button>
+      <span class="count" id="sub-count"></span>
+    </div>
+  </section>
+
+  <section id="phase-result">
+    <div class="sec-head">
+      <h2>3. Resumo</h2>
+      <p class="hint">Sai sozinho das respostas de cima. Ninguém digita aqui.</p>
+    </div>
+    <div class="card">
+      <p class="sum-empty" id="r-empty">Ainda não dá para montar o resumo. Adicione uma área e responda as perguntas de classificação e de como escrever o código.</p>
+      <div class="tablewrap" id="r-tablewrap" hidden>
+        <table>
+          <thead>
+            <tr><th>Área</th><th>Tipo</th><th>Como escrever a lógica</th><th>Como montar o código</th><th>Como testar</th></tr>
+          </thead>
+          <tbody id="r-rows"></tbody>
+        </table>
+      </div>
+      <div class="sum-block" id="r-conflicts-wrap" hidden>
+        <h3>Respostas que se contradizem</h3>
+        <div id="r-conflicts"></div>
+      </div>
+      <div class="sum-block" id="r-open-wrap" hidden>
+        <h3>Perguntas para levar a quem entende do negócio</h3>
+        <ul class="open-list" id="r-open"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="phase-gloss">
+    <div class="sec-head">
+      <h2>Glossário</h2>
+      <p class="hint">Cada palavra difícil desta página, explicada uma vez.</p>
+    </div>
+    <div class="card" id="gloss-card"></div>
+  </section>
+
+  <div class="actions">
+    <button class="primary" id="copy">Copiar resumo</button>
+    <button id="clear">Limpar este projeto</button>
+    <span class="hintline">em Markdown (texto simples com marcas de formatação)</span>
+    <span class="status" id="copy-status"></span>
+  </div>
+
+</div>
+
+<dialog id="eg-modal" aria-labelledby="eg-title">
+  <div class="eg-head">
+    <h2 id="eg-title"><span class="kicker">Exemplos em quatro tipos de projeto</span><span id="eg-question"></span></h2>
+    <button class="eg-close" id="eg-close" type="button" aria-label="Fechar">✕</button>
+  </div>
+  <div class="eg-body" id="eg-body"></div>
+  <p class="eg-foot" id="eg-foot"></p>
+</dialog>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ================= exemplos =================
+     Um exemplo curto embaixo de cada campo. O resto abre no botão de
+     interrogação. Exemplo mostra o formato da resposta, nunca decide:
+     o tipo de uma área é definido pela estratégia da empresa
+     [DDD ch.1 p.37]. */
+
+  var NOTE_TYPE = "Exemplo não decide nada. O tipo de uma área é definido pela estratégia da empresa (livro de DDD, sigla de Domain-Driven Design, capítulo 1, página 37): a mesma área pode ser central numa empresa e de apoio em outra.";
+  var NOTE_SHAPE = "Exemplos só para mostrar o formato da resposta. Quem responde de verdade é quem entende do negócio.";
+  var NOTE_GRAY = "Se os dois custos são conhecidos e dão no mesmo, o livro para aqui: a fronteira entre área de apoio e área comum é zona cinzenta, pode ir para qualquer lado (livro de DDD, sigla de Domain-Driven Design, capítulo 1, página 34).";
+
+  var EXAMPLES = {
+    domain: { inline: "Ajudar pessoas a controlar o próprio dinheiro.", note: NOTE_SHAPE, cases: [
+      ["Finanças pessoais", "Ajudar pessoas a controlar o próprio dinheiro."],
+      ["Academia", "Vender e tocar planos de treino presenciais."],
+      ["Loja online", "Vender produtos com estoque e entrega próprios."],
+      ["Clínica médica", "Atender pacientes em consultas marcadas."]
+    ]},
+    expert: { inline: "O planejador financeiro que atende os clientes.", note: NOTE_SHAPE, cases: [
+      ["Finanças pessoais", "O planejador financeiro que atende os clientes."],
+      ["Academia", "O gerente da unidade, que monta a grade de aulas."],
+      ["Loja online", "A pessoa de operações que fecha e despacha o pedido."],
+      ["Clínica médica", "A recepcionista que remarca consulta, e o médico."]
+    ]},
+    terms: { inline: "lançamento, categoria, orçamento", note: NOTE_SHAPE, cases: [
+      ["Finanças pessoais", "lançamento, categoria, orçamento, conciliação"],
+      ["Academia", "matrícula, plano, aula, entrada na catraca, carência"],
+      ["Loja online", "pedido, carrinho, separação, devolução"],
+      ["Clínica médica", "consulta, encaixe, prontuário, convênio"]
+    ]},
+    ambiguities: { inline: "conta — o cadastro no banco, ou a fatura a pagar.", note: NOTE_SHAPE, cases: [
+      ["Finanças pessoais", "conta — o cadastro no banco, ou a fatura a pagar."],
+      ["Academia", "plano — o contrato que foi vendido, ou o treino que foi montado."],
+      ["Loja online", "pedido — o que o cliente pediu, ou a ordem que vai para o galpão."],
+      ["Clínica médica", "atendimento — a consulta em si, ou o registro para cobrar do convênio."]
+    ]},
+    subName: { inline: "conciliação bancária", note: NOTE_SHAPE, cases: [
+      ["Finanças pessoais", "conciliação bancária · orçamento do mês · importação do extrato"],
+      ["Academia", "entrada na catraca · venda de plano · grade de aulas"],
+      ["Loja online", "separação no estoque · cálculo do frete · devolução"],
+      ["Clínica médica", "agenda · prontuário · cobrança do convênio"]
+    ]},
+    useCases: { inline: "importar extrato · conferir lançamento · marcar repetido", note: NOTE_SHAPE, cases: [
+      ["Finanças pessoais", "importar extrato · conferir lançamento · marcar repetido"],
+      ["Academia", "liberar a catraca · bloquear quem está devendo · registrar visitante"],
+      ["Loja online", "separar item · gerar a lista de separação · dar baixa no estoque"],
+      ["Clínica médica", "marcar consulta · encaixar urgência · registrar falta"]
+    ]},
+    actor: { inline: "O próprio usuário conferindo o extrato.", note: NOTE_SHAPE, cases: [
+      ["Finanças pessoais", "O próprio usuário conferindo o extrato."],
+      ["Academia", "O aluno na catraca, sem ninguém atendendo."],
+      ["Loja online", "O separador no galpão, com o leitor de código na mão."],
+      ["Clínica médica", "A recepcionista no balcão."]
+    ]},
+    c_side: { inline: "O motor que adivinha a categoria da despesa sozinho.", note: NOTE_TYPE, cases: [
+      ["Finanças pessoais", "O motor que adivinha a categoria da despesa sozinho: outros aplicativos pagariam para usar."],
+      ["Academia", "A montagem de treino por objetivo: dava para vender a academias que não têm sistema."],
+      ["Loja online", "O cálculo de frete com rota própria: transportadoras comprariam."],
+      ["Clínica médica", "O que preenche buraco na agenda sozinho: dava para vender a outras clínicas."]
+    ]},
+    c_complex: { inline: "Conferir o extrato sem contar a mesma despesa duas vezes.", note: NOTE_TYPE, cases: [
+      ["Finanças pessoais", "Conferir o extrato contra os lançamentos sem contar a mesma despesa duas vezes."],
+      ["Academia", "Carência, congelamento e multa mexendo uns nos outros dentro do mesmo contrato."],
+      ["Loja online", "Segurar o estoque, aplicar o cupom e calcular o frete sem vender o que não tem."],
+      ["Clínica médica", "Encaixe que respeita a duração, o convênio e o intervalo do médico."]
+    ]},
+    c_ready: { inline: "Ler os dados do banco do cliente.", note: NOTE_TYPE, cases: [
+      ["Finanças pessoais", "Ler os dados do banco do cliente, e buscar a cotação do dólar."],
+      ["Academia", "Cobrar no cartão todo mês, sozinho."],
+      ["Loja online", "Emitir a nota fiscal."],
+      ["Clínica médica", "Assinar documento com validade legal."]
+    ]},
+    c_hack: { inline: "As regras de categoria que cada usuário cria para si.", note: NOTE_TYPE, cases: [
+      ["Finanças pessoais", "As regras de categoria que cada usuário cria para si."],
+      ["Academia", "O cadastro de modalidades e salas da unidade."],
+      ["Loja online", "As faixas de frete fixas por região."],
+      ["Clínica médica", "O cadastro dos procedimentos que a casa faz."]
+    ]},
+    c_crud: { inline: "Cadastro de contas e categorias: criar, ver, editar, apagar.", note: NOTE_TYPE, cases: [
+      ["Finanças pessoais", "Cadastro de contas e categorias: criar, ver, editar, apagar."],
+      ["Academia", "Cadastro de professores e salas."],
+      ["Loja online", "Cadastro de fornecedores."],
+      ["Clínica médica", "Cadastro de convênios."]
+    ]},
+    c_equal: { inline: "Exportar o relatório num arquivo para imprimir.", note: NOTE_GRAY, cases: [
+      ["Finanças pessoais", "Exportar o relatório num arquivo para imprimir."],
+      ["Academia", "Mandar aviso no celular do aluno."],
+      ["Loja online", "Gerar a etiqueta que vai colada na caixa."],
+      ["Clínica médica", "Lembrete de consulta por mensagem de texto."]
+    ]},
+    v_change: { inline: "A parte que adivinha categoria muda toda semana; o cadastro de contas fica anos parado.", note: NOTE_TYPE, cases: [
+      ["Finanças pessoais", "A parte que adivinha categoria muda a cada teste com usuário; o cadastro de contas fica anos parado."],
+      ["Academia", "A regra de plano muda a cada promoção; o cadastro de sala fica igual."],
+      ["Loja online", "O frete muda a cada negociação com transportadora; o cadastro de fornecedor fica parado."],
+      ["Clínica médica", "A regra de encaixe muda de médico para médico; o convênio só muda quando o contrato muda."]
+    ]},
+    p_money: { inline: "Refazer o caminho até entender por que o saldo do mês ficou naquele valor.", note: NOTE_SHAPE, cases: [
+      ["Finanças pessoais", "Refazer o caminho até entender por que o saldo do mês ficou naquele valor."],
+      ["Academia", "Provar depois por que a mensalidade saiu com desconto."],
+      ["Loja online", "Rastrear cada baixa de estoque até a origem."],
+      ["Clínica médica", "Acompanhar cada repasse ao médico e ao convênio."]
+    ]},
+    p_complex: { inline: "Quanto sobra numa categoria depende do que sobrou nas outras.", note: NOTE_SHAPE, cases: [
+      ["Finanças pessoais", "Quanto sobra numa categoria depende do que sobrou nas outras."],
+      ["Academia", "Congelar o plano muda a data de vencimento e o valor da multa."],
+      ["Loja online", "Aplicar o cupom muda o frete grátis e o valor mínimo do pedido."],
+      ["Clínica médica", "Remarcar uma consulta libera a vaga e muda quem pode ser encaixado."]
+    ]},
+    p_data: { inline: "O extrato importado, com todas as linhas dentro dele.", note: NOTE_SHAPE, cases: [
+      ["Finanças pessoais", "O extrato importado, com todas as linhas dentro dele."],
+      ["Academia", "A ficha de treino, com os exercícios e as séries dentro."],
+      ["Loja online", "O produto do catálogo, com as variações e as fotos dentro."],
+      ["Clínica médica", "O cadastro do paciente, com telefones e convênios dentro."]
+    ]},
+    p_models: { inline: "O lançamento guardado numa tabela, e o mesmo dado num painel do mês.", note: NOTE_SHAPE, cases: [
+      ["Finanças pessoais", "O lançamento guardado numa tabela, e o mesmo dado somado num painel do mês."],
+      ["Academia", "A matrícula guardada, e a mesma informação na lista de presença do dia."],
+      ["Loja online", "O pedido guardado, e o mesmo produto numa busca por texto na vitrine."],
+      ["Clínica médica", "A consulta guardada, e a mesma consulta na agenda vista por sala."]
+    ]},
+    a_invariant: { inline: "A soma dos lançamentos é sempre igual ao saldo da conta.", note: NOTE_SHAPE, cases: [
+      ["Finanças pessoais", "A soma dos lançamentos é sempre igual ao saldo da conta."],
+      ["Academia", "Um aluno nunca tem dois planos valendo ao mesmo tempo."],
+      ["Loja online", "O total reservado nunca passa do que existe na prateleira."],
+      ["Clínica médica", "Duas consultas nunca ocupam o mesmo médico no mesmo horário."]
+    ]},
+    a_consistent: { inline: "O saldo e as linhas que formam esse saldo.", note: NOTE_SHAPE, cases: [
+      ["Finanças pessoais", "O saldo e as linhas que formam esse saldo."],
+      ["Academia", "O plano que está valendo e as datas de início, carência e fim."],
+      ["Loja online", "A quantidade na prateleira e as reservas em aberto."],
+      ["Clínica médica", "O horário do médico e as consultas marcadas nele."]
+    ]},
+    a_stale: { inline: "Saldo velho por um segundo já libera um gasto acima do limite.", note: NOTE_SHAPE, cases: [
+      ["Finanças pessoais", "Saldo velho por um segundo já libera um gasto acima do limite."],
+      ["Academia", "Catraca com dado velho libera quem acabou de ser bloqueado."],
+      ["Loja online", "Estoque com dado velho vende a última peça duas vezes."],
+      ["Clínica médica", "Agenda com dado velho marca dois pacientes no mesmo horário."]
+    ]},
+    a_concurrent: { inline: "O aplicativo e a importação automática mexendo no mesmo extrato.", note: NOTE_SHAPE, cases: [
+      ["Finanças pessoais", "O aplicativo e a importação automática mexendo no mesmo extrato."],
+      ["Academia", "A recepção e o totem vendendo o mesmo horário de aula."],
+      ["Loja online", "Dois clientes comprando a última peça no mesmo segundo."],
+      ["Clínica médica", "Duas recepcionistas marcando o mesmo encaixe."]
+    ]}
+  };
+
+  /* ================= glossário ================= */
+
+  var GLOSSARY = [
+    ["DDD (Domain-Driven Design, ou desenho guiado pelo domínio)",
+     "O jeito de projetar software partindo do negócio, e não do banco de dados. Este formulário segue o livro de Vlad Khononov."],
+    ["Domínio",
+     "A atividade principal do negócio. Tudo o que a empresa faz cabe dentro dele."],
+    ["Subdomínio, ou área",
+     "Um pedaço menor do negócio: ações que andam juntas, feitas pela mesma pessoa, mexendo nos mesmos dados."],
+    ["Área central (core)",
+     "É o que faz a empresa ser diferente das concorrentes. Precisa ser feita em casa, com o time mais forte."],
+    ["Área de apoio (supporting)",
+     "O negócio precisa dela, mas ela não diferencia ninguém. Costuma ser simples, parecida com tela de cadastro."],
+    ["Área comum (generic)",
+     "Todo mundo faz igual. Sai mais barato comprar pronto ou usar algo de código aberto."],
+    ["Zona cinzenta",
+     "Quando comprar pronto e fazer em casa custam o mesmo. O livro não escolhe: quem decide é o negócio."],
+    ["Invariante",
+     "Uma regra que nunca pode ser falsa, em nenhum instante. Se ficar falsa, o sistema está errado."],
+    ["Agregado",
+     "O grupo de dados que muda junto e obedece à mesma regra. Nada fora do grupo entra na mesma verificação."],
+    ["Transaction script (procedimento por operação)",
+     "Cada operação é um procedimento direto, do começo ao fim. O mais simples de todos."],
+    ["Active record (o registro se salva sozinho)",
+     "Cada registro sabe se gravar e se carregar do banco. Serve quando o dado tem listas dentro, mas quase não tem regra."],
+    ["Domain model (modelo de domínio)",
+     "Objetos que carregam as regras do negócio dentro deles, em vez de deixar a regra espalhada."],
+    ["Event sourcing (guardar os fatos)",
+     "Em vez de guardar só como as coisas estão agora, guarda cada fato que aconteceu. O estado atual sai da soma dos fatos."],
+    ["CQRS (Command Query Responsibility Segregation, ou separar escrita de leitura)",
+     "Guardar o dado de um jeito para escrever e de outro jeito para consultar, cada um no formato que serve melhor."],
+    ["Ports and adapters (portas e adaptadores)",
+     "O jeito de montar o código com as regras no meio, e banco, tela e serviços de fora encaixados por fora."],
+    ["Camadas",
+     "O jeito mais comum de montar o código: tela em cima, lógica no meio, banco embaixo."],
+    ["Application service (serviço de aplicação)",
+     "Uma camada extra que coordena os passos de uma operação, sem guardar regra de negócio."],
+    ["Pirâmide de testes",
+     "Muito teste pequeno e rápido na base, poucos testes grandes no topo."],
+    ["Diamante de testes",
+     "O peso fica no meio: a maior parte dos testes verifica duas partes conversando."],
+    ["Pirâmide invertida",
+     "O peso fica no topo: a maior parte dos testes usa o sistema inteiro, de ponta a ponta."],
+    ["Markdown",
+     "Texto simples com marcas de formatação, tipo ** para negrito. Cola direto em quase qualquer editor."]
+  ];
+
+  /* ================= o formulário ================= */
+
+  var PROJECT_FIELDS = [
+    { id: "domain", eg: "domain",
+      ask: "Qual é a atividade principal do negócio?",
+      why: "É o guarda-chuva: tudo o que a empresa faz cabe aqui dentro. As áreas de baixo são pedaços dele.",
+      placeholder: "Uma frase" },
+    { id: "expert", eg: "expert",
+      ask: "Quem é a pessoa do negócio que conhece o assunto a fundo?",
+      why: "Não é o analista nem o programador. É quem pede o sistema, ou quem usa ele todo dia.",
+      placeholder: "Nome ou cargo" },
+    { id: "terms", eg: "terms",
+      ask: "Quais palavras o negócio usa no dia a dia?",
+      why: "Escreva do jeito que eles falam, não do jeito que o banco de dados guarda.",
+      placeholder: "Uma palavra por linha" },
+    { id: "ambiguities", eg: "ambiguities",
+      ask: "Tem duas palavras para a mesma coisa, ou uma palavra com dois sentidos?",
+      why: "Duas palavras para a mesma coisa é sinal de fronteira errada. Uma palavra com dois sentidos é sinal de duas áreas diferentes.",
+      placeholder: "Uma por linha, no formato palavra — os dois sentidos" }
+  ];
+
+  var SUB_TEXT = [
+    { id: "useCases", eg: "useCases",
+      ask: "O que dá para fazer nessa área?",
+      why: "Liste as ações. Ações que andam juntas, mexendo nos mesmos dados, formam uma área só.",
+      placeholder: "Uma ação por linha" },
+    { id: "actor", eg: "actor",
+      ask: "Quem faz essas ações?",
+      why: "Uma área costuma ter sempre a mesma pessoa, ou o mesmo cargo, usando.",
+      placeholder: "O cargo de quem usa" }
+  ];
+
+  /* classificação: a primeira que der Sim decide */
+  var CLASSIFY = [
+    { id: "c_side", eg: "c_side",
+      ask: "Dava para vender isso separado, como um produto à parte?",
+      why: "Se outra empresa pagaria só por isso, é sinal de que aqui está a vantagem do negócio.",
+      type: "central", reason: "dava para vender separado, como produto à parte" },
+    { id: "c_complex", eg: "c_complex",
+      ask: "Tem conta difícil, ou várias regras que dependem umas das outras?",
+      why: "Conferir se um campo está preenchido não conta. Regra que muda o resultado de outra regra, sim.",
+      type: "central", reason: "tem conta difícil ou regras que dependem umas das outras" },
+    { id: "c_ready", eg: "c_ready",
+      ask: "Já existe pronto no mercado, e usar o pronto sai mais fácil e mais barato?",
+      why: "Se sai, não compensa construir: compre, ou use algo de código aberto.",
+      type: "comum", reason: "já existe pronto, e usar o pronto sai mais barato" },
+    { id: "c_hack", eg: "c_hack",
+      ask: "Fazer o seu do zero sai mais fácil e mais barato do que ligar num serviço de fora?",
+      why: "Coisa simples demais para valer a conversa com um fornecedor.",
+      type: "de apoio", reason: "fazer o seu do zero sai mais fácil e mais barato" },
+    { id: "c_crud", eg: "c_crud",
+      ask: "Isso é basicamente uma tela de cadastro: criar, ver, editar e apagar?",
+      why: "Isso é um sinal, não uma prova.",
+      type: "de apoio", reason: "a tela é basicamente um cadastro", sign: true },
+    { id: "c_equal", eg: "c_equal",
+      ask: "Os dois custos, comprar pronto e fazer o seu, são conhecidos e dão no mesmo?",
+      why: "Aqui o livro para de decidir e devolve a pergunta para o negócio.",
+      type: "indefinido", reason: "os dois custos são conhecidos e dão no mesmo" }
+  ];
+
+  var VOLATILITY = {
+    id: "v_change", eg: "v_change",
+    ask: "Com que frequência essa área muda?",
+    why: "Isto serve para conferir a resposta de cima. Se as duas não baterem, a contradição aparece escrita e quem decide é o negócio.",
+    options: [
+      { label: "Muda muito, e a solução vai aparecendo aos poucos", implies: "central" },
+      { label: "Quase não muda, e não dá vantagem nenhuma", implies: "de apoio" },
+      { label: "Muda quando sai correção, ou quando o mercado lança coisa nova", implies: "comum" }
+    ]
+  };
+
+  /* como escrever a lógica: a primeira que der Sim decide */
+  var PATTERN = [
+    { id: "p_money", eg: "p_money",
+      ask: "Lida com dinheiro, precisa de um histórico à prova de auditoria, ou o negócio precisa entender em detalhe o que aconteceu?",
+      why: "Guardar o histórico não é a mesma coisa que precisar refazer a história passo a passo.",
+      out: {
+        pattern: "Event sourcing",
+        plain: "guarda cada fato que aconteceu, e o estado de agora sai da soma dos fatos, com as regras dentro dos objetos",
+        arch: "CQRS (escrita e leitura separadas)",
+        archPlain: "guardar o dado de um jeito para escrever e de outro para consultar",
+        test: "Pirâmide de testes",
+        testPlain: "muito teste pequeno e rápido na base"
+      } },
+    { id: "p_complex", eg: "p_complex",
+      ask: "Tem regras que mexem umas nas outras?",
+      why: "Conferir se um campo veio preenchido não conta. Regra que muda o resultado de outra regra, sim.",
+      out: {
+        pattern: "Domain model",
+        plain: "objetos que carregam as regras do negócio dentro deles",
+        arch: "Ports and adapters (portas e adaptadores)",
+        archPlain: "as regras no meio, banco e tela encaixados por fora",
+        test: "Pirâmide de testes",
+        testPlain: "muito teste pequeno e rápido na base"
+      } },
+    { id: "p_data", eg: "p_data",
+      ask: "O dado tem listas dentro de listas, mas as regras são simples?",
+      why: "Estrutura grande, com coisas dentro de coisas, sem nenhuma regra forte amarrando.",
+      out: {
+        pattern: "Active record",
+        plain: "cada registro sabe se gravar e se carregar do banco",
+        arch: "Camadas com serviço de aplicação",
+        archPlain: "tela, serviço que coordena, lógica e banco",
+        test: "Diamante de testes",
+        testPlain: "o peso fica nos testes de duas partes conversando"
+      } }
+  ];
+
+  var PATTERN_FALLBACK = {
+    pattern: "Transaction script",
+    plain: "cada operação é um procedimento direto, do começo ao fim",
+    arch: "Camadas mínimas",
+    archPlain: "três camadas só: tela, lógica e banco",
+    test: "Pirâmide invertida",
+    testPlain: "o peso fica nos testes que usam o sistema inteiro"
+  };
+
+  var CQRS_Q = { id: "p_models", eg: "p_models",
+    ask: "Os mesmos dados precisam ser guardados de mais de um jeito?",
+    why: "É a única exceção da árvore. Se sim, soma CQRS (escrita e leitura separadas) ao que saiu acima, seja qual for." };
+
+  var AGGREGATE = [
+    { id: "a_invariant", eg: "a_invariant", kind: "text",
+      ask: "Que regra nunca pode ser falsa, em nenhum momento?",
+      why: "É essa regra que define até onde vai o grupo de dados.",
+      placeholder: "Uma frase" },
+    { id: "a_consistent", eg: "a_consistent", kind: "text",
+      ask: "Quais dados precisam estar certos no mesmo instante, todos juntos?",
+      why: "Só esses entram no grupo. O resto fica de fora.",
+      placeholder: "Um dado por linha" },
+    { id: "a_stale", eg: "a_stale", kind: "choice",
+      ask: "Se esse dado ficar um segundo desatualizado, o sistema aceita algo errado?",
+      why: "Se não aceita, ele pertence a outro grupo.",
+      choices: ["Aceita errado", "Tudo bem"] },
+    { id: "a_concurrent", eg: "a_concurrent", kind: "choice",
+      ask: "Duas pessoas mexem nisso ao mesmo tempo?",
+      why: "Sem duas pessoas de verdade ao mesmo tempo, dá para separar sem medo.",
+      choices: ["Sim", "Não"] }
+  ];
+
+  var SIM_NAO = ["Sim", "Não"];
+
+  var TYPE_PLAIN = {
+    "central": "é o que faz a empresa ser diferente das concorrentes",
+    "de apoio": "o negócio precisa, mas isso não diferencia ninguém",
+    "comum": "todo mundo faz igual, dá para comprar pronto",
+    "indefinido": "o livro não escolhe: quem decide é o negócio"
+  };
+
+  /* ================= estado ================= */
+
+  var state = { projects: {}, current: null, project: {}, subs: [] };
+
+  var db = null;
+  var openPanels = {};
+  var statusEl = document.getElementById("status");
+  var projectTimer = null;
+  var subTimers = {};
+
+  function setStatus(text, cls) {
+    statusEl.textContent = text;
+    statusEl.className = "status" + (cls ? " " + cls : "");
+  }
+
+  function filled(v) { return !!(v && String(v).trim()); }
+
+  function newId(prefix) {
+    return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  /* ================= guardar ================= */
+
+  function localKey(id) { return "flow:" + id; }
+
+  function readLocal(id) {
+    try { return JSON.parse(localStorage.getItem(localKey(id)) || "null"); }
+    catch (e) { return null; }
+  }
+  function writeLocal(id, body) {
+    try { localStorage.setItem(localKey(id), JSON.stringify(body)); } catch (e) {}
+  }
+  function readLocalIndex() {
+    try { return JSON.parse(localStorage.getItem("flow:index") || "{}"); }
+    catch (e) { return {}; }
+  }
+  function writeLocalIndex(index) {
+    try { localStorage.setItem("flow:index", JSON.stringify(index)); } catch (e) {}
+  }
+
+  function snapshotLocal() {
+    if (!state.current) return;
+    writeLocal(state.current, {
+      name: state.projects[state.current],
+      project: state.project,
+      subs: state.subs,
+      updatedAt: new Date().toISOString()
+    });
+    writeLocalIndex(state.projects);
+  }
+
+  function onWriteError(err) {
+    if (err && err.code === "invalid_argument") setStatus("só leitura", "warn");
+    else setStatus("guardado neste navegador", "warn");
+  }
+
+  function projectBody() {
+    var body = { name: state.projects[state.current] || "", updatedAt: new Date().toISOString() };
+    PROJECT_FIELDS.forEach(function (f) { body[f.id] = state.project[f.id] || ""; });
+    return body;
+  }
+
+  function saveProject() {
+    if (!state.current) return;
+    snapshotLocal();
+    if (!db) { setStatus("guardado neste navegador", "warn"); return; }
+    setStatus("guardando…");
+    db.doc("projects/" + state.current).set(projectBody()).then(function () {
+      setStatus("guardado", "saved");
+    }).catch(onWriteError);
+  }
+
+  function saveSub(sid) {
+    if (!state.current) return;
+    var sub = state.subs.filter(function (s) { return s.id === sid; })[0];
+    if (!sub) return;
+    snapshotLocal();
+    if (!db) { setStatus("guardado neste navegador", "warn"); return; }
+    setStatus("guardando…");
+    db.collection("projects/" + state.current + "/subdomains").doc(sid).set({
+      name: sub.name || "",
+      useCases: sub.answers.useCases || "",
+      actor: sub.answers.actor || "",
+      answers: sub.answers,
+      order: sub.order,
+      updatedAt: new Date().toISOString()
+    }).then(function () { setStatus("guardado", "saved"); }).catch(onWriteError);
+  }
+
+  function deleteSubDoc(sid) {
+    if (!db || !state.current) return;
+    db.collection("projects/" + state.current + "/subdomains").doc(sid).delete()
+      .then(function () { setStatus("guardado", "saved"); }).catch(onWriteError);
+  }
+
+  /* o navegador guarda na hora; o banco espera a pausa de digitação */
+  function scheduleProject() {
+    snapshotLocal();
+    clearTimeout(projectTimer);
+    setStatus("editando…");
+    projectTimer = setTimeout(saveProject, 700);
+  }
+
+  function scheduleSub(sid) {
+    snapshotLocal();
+    clearTimeout(subTimers[sid]);
+    setStatus("editando…");
+    subTimers[sid] = setTimeout(function () { saveSub(sid); }, 700);
+  }
+
+  /* ================= o que sai das respostas ================= */
+
+  function classify(a) {
+    for (var i = 0; i < CLASSIFY.length; i++) {
+      var row = CLASSIFY[i];
+      if (a[row.id] === "Sim") {
+        return { type: row.type, reason: row.reason, sign: !!row.sign };
+      }
+    }
+    return { type: null, reason: null };
+  }
+
+  function volatility(a) {
+    var picked = a[VOLATILITY.id];
+    if (!picked) return null;
+    for (var i = 0; i < VOLATILITY.options.length; i++) {
+      if (VOLATILITY.options[i].label === picked) return VOLATILITY.options[i];
+    }
+    return null;
+  }
+
+  function pattern(a) {
+    var src = null, deciding = null;
+    for (var i = 0; i < PATTERN.length; i++) {
+      if (a[PATTERN[i].id] === "Sim") { src = PATTERN[i].out; deciding = PATTERN[i].ask; break; }
+    }
+    if (!src) {
+      var allNo = PATTERN.every(function (p) { return a[p.id] === "Não"; });
+      if (!allNo) return null;
+      src = PATTERN_FALLBACK;
+      deciding = "nenhuma das três deu Sim";
+    }
+    var out = {
+      pattern: src.pattern, plain: src.plain,
+      arch: src.arch, archPlain: src.archPlain,
+      test: src.test, testPlain: src.testPlain,
+      deciding: deciding
+    };
+    out.cqrs = a[CQRS_Q.id] === "Sim";
+    if (out.cqrs && out.arch.indexOf("CQRS") === -1) {
+      out.arch = out.arch + " + CQRS (escrita e leitura separadas)";
+      out.archPlain = out.archPlain + ", com escrita e leitura guardadas de jeitos diferentes";
+    }
+    out.implied = (out.pattern === "Domain model" || out.pattern === "Event sourcing") ? "central" : "de apoio";
+    out.needsAggregate = out.implied === "central";
+    return out;
+  }
+
+  function derive(sub) {
+    var a = sub.answers || {};
+    var cls = classify(a);
+    var vol = volatility(a);
+    var pat = pattern(a);
+    var conflicts = [];
+
+    if (cls.type && cls.type !== "indefinido" && vol && vol.implies !== cls.type) {
+      conflicts.push("a classificação deu área " + cls.type + ", porque " + cls.reason +
+        ". Mas a frequência de mudança combina com área " + vol.implies +
+        " (" + vol.label.toLowerCase() + "). Quem decide o tipo é o negócio.");
+    }
+    if (cls.type === "indefinido") {
+      conflicts.push("zona cinzenta: os dois custos são conhecidos e dão no mesmo, então o tipo fica em aberto até o negócio decidir.");
+    }
+    if (cls.type && cls.type !== "indefinido" && pat) {
+      if (cls.type === "central" && pat.implied === "de apoio") {
+        conflicts.push("o negócio disse que é área central, mas o jeito de escrever a lógica que saiu (" +
+          pat.pattern + ") combina com área de apoio. Vale rever o tipo com o negócio.");
+      } else if (cls.type === "de apoio" && pat.implied === "central") {
+        conflicts.push("o negócio disse que é área de apoio, mas o jeito de escrever a lógica que saiu (" +
+          pat.pattern + ") combina com área central. A vantagem de uma área central nem sempre é técnica.");
+      } else if (cls.type === "comum" && pat.implied === "central") {
+        conflicts.push("o negócio disse que é área comum, mas o jeito de escrever a lógica que saiu (" +
+          pat.pattern + ") combina com área central. O livro não decide esse caso: leve ao negócio.");
+      }
+    }
+
+    return { cls: cls, vol: vol, pat: pat, conflicts: conflicts };
+  }
+
+  function typeLabel(t) {
+    if (!t) return null;
+    return t === "indefinido" ? "tipo indefinido" : "área " + t;
+  }
+
+  function subLabel(sub, index) {
+    return filled(sub.name) ? sub.name.trim() : "Área " + (index + 1);
+  }
+
+  /* ================= o que ficou em branco ================= */
+
+  function openQuestions() {
+    var out = [];
+    PROJECT_FIELDS.forEach(function (f) {
+      if (!filled(state.project[f.id])) out.push({ scope: "O negócio", ask: f.ask });
+    });
+    state.subs.forEach(function (sub, i) {
+      var label = subLabel(sub, i);
+      var a = sub.answers || {};
+      if (!filled(sub.name)) out.push({ scope: label, ask: "Como se chama essa área?" });
+      SUB_TEXT.forEach(function (f) {
+        if (!filled(a[f.id])) out.push({ scope: label, ask: f.ask });
+      });
+      if (!classify(a).type) {
+        CLASSIFY.forEach(function (row) {
+          if (!a[row.id]) out.push({ scope: label, ask: row.ask });
+        });
+      }
+      if (!a[VOLATILITY.id]) out.push({ scope: label, ask: VOLATILITY.ask });
+      var pat = pattern(a);
+      if (!pat) {
+        PATTERN.forEach(function (row) {
+          if (!a[row.id]) out.push({ scope: label, ask: row.ask });
+        });
+      }
+      if (!a[CQRS_Q.id]) out.push({ scope: label, ask: CQRS_Q.ask });
+      if (pat && pat.needsAggregate) {
+        AGGREGATE.forEach(function (row) {
+          if (!filled(a[row.id])) out.push({ scope: label, ask: row.ask });
+        });
+      }
+    });
+    return out;
+  }
+
+  function countAnswered() {
+    var total = 0, done = 0;
+    PROJECT_FIELDS.forEach(function (f) {
+      total++;
+      if (filled(state.project[f.id])) done++;
+    });
+    state.subs.forEach(function (sub) {
+      var a = sub.answers || {};
+      var fields = [sub.name];
+      SUB_TEXT.forEach(function (f) { fields.push(a[f.id]); });
+      CLASSIFY.forEach(function (f) { fields.push(a[f.id]); });
+      fields.push(a[VOLATILITY.id]);
+      PATTERN.forEach(function (f) { fields.push(a[f.id]); });
+      fields.push(a[CQRS_Q.id]);
+      var pat = pattern(a);
+      if (pat && pat.needsAggregate) {
+        AGGREGATE.forEach(function (f) { fields.push(a[f.id]); });
+      }
+      fields.forEach(function (v) { total++; if (filled(v)) done++; });
+    });
+    return { total: total, done: done };
+  }
+
+  /* ================= modal de exemplos ================= */
+
+  var modal = document.getElementById("eg-modal");
+  var lastOpener = null;
+
+  function openExamples(key, ask, opener) {
+    var data = EXAMPLES[key];
+    if (!data) return;
+    lastOpener = opener || null;
+    document.getElementById("eg-question").textContent = ask;
+    var body = document.getElementById("eg-body");
+    body.textContent = "";
+    data.cases.forEach(function (c) {
+      var box = el("div", "eg-case");
+      box.appendChild(el("p", "eg-domain", c[0]));
+      box.appendChild(el("p", "eg-text", c[1]));
+      body.appendChild(box);
+    });
+    document.getElementById("eg-foot").textContent = data.note || "";
+    if (typeof modal.showModal === "function") modal.showModal();
+    else modal.setAttribute("open", "");
+  }
+
+  function closeExamples() {
+    if (typeof modal.close === "function") modal.close();
+    else modal.removeAttribute("open");
+  }
+
+  document.getElementById("eg-close").addEventListener("click", closeExamples);
+  modal.addEventListener("close", function () {
+    if (lastOpener && document.contains(lastOpener)) lastOpener.focus();
+    lastOpener = null;
+  });
+  modal.addEventListener("click", function (e) {
+    if (e.target === modal) closeExamples();  /* clique no fundo escuro fecha */
+  });
+
+  /* ================= blocos de interface ================= */
+
+  function chevron() {
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("width", "10"); svg.setAttribute("height", "12");
+    svg.setAttribute("viewBox", "0 0 10 12"); svg.setAttribute("aria-hidden", "true");
+    var path = document.createElementNS(ns, "path");
+    path.setAttribute("d", "M2.5 1.5 L7.5 6 L2.5 10.5");
+    path.setAttribute("fill", "none"); path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", "1.8"); path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    svg.appendChild(path);
+    return svg;
+  }
+
+  /* cfg: {ask, why, eg, choices|placeholder, value, onChange|onInput} */
+  function questionRow(cfg) {
+    var row = el("div", "row");
+    var main = el("div", "row-main");
+
+    var text = el("div", "row-text");
+    var ask = el("p", "ask", cfg.ask);
+    var data = cfg.eg ? EXAMPLES[cfg.eg] : null;
+    if (data) {
+      var help = el("button", "help", "?");
+      help.type = "button";
+      help.setAttribute("aria-label", "Ver exemplos de outros projetos para: " + cfg.ask);
+      help.addEventListener("click", function () { openExamples(cfg.eg, cfg.ask, help); });
+      ask.appendChild(help);
+    }
+    text.appendChild(ask);
+    if (cfg.why) text.appendChild(el("p", "why", cfg.why));
+    if (data && data.inline) {
+      var eg = el("p", "eg");
+      eg.appendChild(el("b", null, "Exemplo: "));
+      eg.appendChild(document.createTextNode(data.inline));
+      text.appendChild(eg);
+    }
+    main.appendChild(text);
+
+    var control = el("div", "row-control");
+
+    if (cfg.choices) {
+      var compact = cfg.choices.every(function (c) { return c.length <= 14; });
+      var group = el("div", compact ? "seg" : "opts");
+      group.setAttribute("role", "group");
+      group.setAttribute("aria-label", cfg.ask);
+      cfg.choices.forEach(function (choice) {
+        var btn = el("button");
+        btn.type = "button";
+        btn.appendChild(el("span", null, choice));
+        if (!compact) btn.appendChild(el("span", "tick", "✓"));
+        btn.setAttribute("aria-pressed", cfg.value === choice ? "true" : "false");
+        btn.addEventListener("click", function () {
+          cfg.onChange(cfg.value === choice ? "" : choice);
+        });
+        group.appendChild(btn);
+      });
+      if (!compact) control.className = "row-control wide";
+      control.appendChild(group);
+    } else {
+      control.className = "row-control wide";
+      var area = el("textarea");
+      area.placeholder = cfg.placeholder || "";
+      area.value = cfg.value || "";
+      area.rows = 2;
+      area.setAttribute("aria-label", cfg.ask);
+      area.addEventListener("input", function () { cfg.onInput(area.value); });
+      control.appendChild(area);
+    }
+
+    main.appendChild(control);
+    row.appendChild(main);
+    return row;
+  }
+
+  function groupTitle(text, note) {
+    var p = el("p", "grp", text);
+    if (note) p.appendChild(el("span", "note", "· " + note));
+    return p;
+  }
+
+  /* ================= nível 1: o negócio ================= */
+
+  function renderProjectCard() {
+    var card = document.getElementById("project-card");
+    card.textContent = "";
+    PROJECT_FIELDS.forEach(function (f) {
+      card.appendChild(questionRow({
+        ask: f.ask, why: f.why, eg: f.eg, placeholder: f.placeholder,
+        value: state.project[f.id],
+        onInput: function (v) {
+          state.project[f.id] = v;
+          scheduleProject();
+          renderSummary();
+          renderMeters();
+        }
+      }));
+    });
+  }
+
+  /* ================= nível 2: as áreas ================= */
+
+  function renderSubList() {
+    var list = document.getElementById("sub-list");
+    list.textContent = "";
+
+    if (!state.subs.length) {
+      list.appendChild(el("p", "empty",
+        "Nenhuma área ainda. Todo negócio é feito de várias áreas pequenas — adicione uma por atividade."));
+    }
+
+    state.subs.forEach(function (sub, i) { list.appendChild(renderSub(sub, i)); });
+
+    document.getElementById("sub-count").textContent = state.subs.length
+      ? state.subs.length + (state.subs.length === 1 ? " área" : " áreas")
+      : "";
+  }
+
+  function refreshSub(sub) {
+    var i = state.subs.indexOf(sub);
+    if (i < 0) { renderSubList(); renderSummary(); renderMeters(); return; }
+    var list = document.getElementById("sub-list");
+    var old = list.children[i];
+    var fresh = renderSub(sub, i);
+    if (old) list.replaceChild(fresh, old); else list.appendChild(fresh);
+    renderSummary();
+    renderMeters();
+  }
+
+  function refreshChips(sub) {
+    var i = state.subs.indexOf(sub);
+    var panel = document.getElementById("sub-list").children[i];
+    if (!panel) return;
+    var holder = panel.querySelector(".chips");
+    if (!holder) return;
+    holder.textContent = "";
+    chipsInto(holder, derive(sub));
+  }
+
+  function chipsInto(holder, d) {
+    function chip(text, cls) { holder.appendChild(el("span", "chip" + (cls ? " " + cls : ""), text)); }
+    chip(typeLabel(d.cls.type) || "tipo em aberto",
+      d.cls.type && d.cls.type !== "indefinido" ? "on" : "");
+    chip(d.pat ? d.pat.pattern : "lógica em aberto", d.pat ? "on" : "");
+    if (d.conflicts.length) {
+      chip(d.conflicts.length === 1 ? "1 contradição" : d.conflicts.length + " contradições", "flag");
+    }
+  }
+
+  function renderSub(sub, index) {
+    var d = derive(sub);
+    var wrap = el("div", "sub card" + (openPanels[sub.id] ? " open" : ""));
+
+    var head = el("div", "sub-head");
+
+    var toggle = el("button", "chev");
+    toggle.type = "button";
+    toggle.appendChild(chevron());
+    toggle.setAttribute("aria-expanded", openPanels[sub.id] ? "true" : "false");
+    toggle.setAttribute("aria-label", (openPanels[sub.id] ? "Fechar " : "Abrir ") + subLabel(sub, index));
+    toggle.addEventListener("click", function () {
+      openPanels[sub.id] = !openPanels[sub.id];
+      refreshSub(sub);
+    });
+    head.appendChild(toggle);
+
+    var name = el("input", "sub-name");
+    name.type = "text";
+    name.value = sub.name || "";
+    name.placeholder = "Nome da área";
+    name.setAttribute("aria-label", "Nome da área");
+    name.addEventListener("input", function () {
+      sub.name = name.value;
+      scheduleSub(sub.id);
+      renderSummary();
+      renderMeters();
+    });
+    head.appendChild(name);
+
+    var nameHelp = el("button", "help", "?");
+    nameHelp.type = "button";
+    nameHelp.setAttribute("aria-label", "Ver exemplos de nomes de área");
+    nameHelp.addEventListener("click", function () {
+      openExamples("subName", "Como se chama essa área?", nameHelp);
+    });
+    head.appendChild(nameHelp);
+
+    var chips = el("div", "chips");
+    chipsInto(chips, d);
+    head.appendChild(chips);
+
+    var del = el("button", "danger", "Remover");
+    del.type = "button";
+    del.addEventListener("click", function () {
+      if (!confirm("Remover " + subLabel(sub, index) + "?")) return;
+      clearTimeout(subTimers[sub.id]);
+      state.subs = state.subs.filter(function (s) { return s.id !== sub.id; });
+      state.subs.forEach(function (s, n) { s.order = n; });
+      delete openPanels[sub.id];
+      snapshotLocal();
+      deleteSubDoc(sub.id);
+      state.subs.forEach(function (s) { scheduleSub(s.id); });
+      renderSubList();
+      renderSummary();
+      renderMeters();
+    });
+    head.appendChild(del);
+
+    wrap.appendChild(head);
+    if (!openPanels[sub.id]) return wrap;
+
+    var body = el("div", "sub-body");
+    var a = sub.answers;
+    var rowIndex = {};
+
+    function onText(id) {
+      return function (v) {
+        a[id] = v;
+        scheduleSub(sub.id);
+        renderSummary();
+        renderMeters();
+      };
+    }
+    /* muda quais perguntas aparecem, então refaz o painel */
+    function onChoiceStructural(id) {
+      return function (v) { a[id] = v; scheduleSub(sub.id); refreshSub(sub); };
+    }
+    /* não muda a forma do painel, então só marca o botão */
+    function plainChoice(id) {
+      return function (v) {
+        a[id] = v;
+        scheduleSub(sub.id);
+        var row = rowIndex[id];
+        if (row) {
+          [].forEach.call(row.querySelectorAll("[aria-pressed]"), function (b) {
+            b.setAttribute("aria-pressed", b.querySelector("span").textContent === v ? "true" : "false");
+          });
+        }
+        refreshChips(sub);
+        renderSummary();
+        renderMeters();
+      };
+    }
+
+    body.appendChild(groupTitle("O que acontece aqui"));
+    SUB_TEXT.forEach(function (f) {
+      body.appendChild(questionRow({
+        ask: f.ask, why: f.why, eg: f.eg, placeholder: f.placeholder,
+        value: a[f.id], onInput: onText(f.id)
+      }));
+    });
+
+    body.appendChild(groupTitle("Que tipo de área é essa", "a primeira que der Sim decide"));
+    var stop = false;
+    CLASSIFY.forEach(function (row) {
+      if (stop) return;
+      body.appendChild(questionRow({
+        ask: row.ask, why: row.why, eg: row.eg,
+        choices: SIM_NAO, value: a[row.id], onChange: onChoiceStructural(row.id)
+      }));
+      if (a[row.id] === "Sim") stop = true;
+    });
+    if (d.cls.type) {
+      var v = el("p", "verdict" + (d.cls.type === "indefinido" ? " gray" : ""));
+      if (d.cls.type === "indefinido") {
+        v.appendChild(el("strong", null, "Zona cinzenta."));
+        v.appendChild(document.createTextNode(" " + upper(d.cls.reason) +
+          ", então o tipo fica em aberto. " + upper(TYPE_PLAIN["indefinido"]) + "."));
+      } else {
+        v.appendChild(el("strong", null, "Área " + d.cls.type + "."));
+        v.appendChild(document.createTextNode(" " + upper(d.cls.reason) +
+          (d.cls.sign ? " — isso é sinal, não prova" : "") + ". " + upper(TYPE_PLAIN[d.cls.type]) + "."));
+      }
+      body.appendChild(v);
+    }
+
+    body.appendChild(groupTitle("Com que frequência muda", "confere a resposta de cima"));
+    var volRow = questionRow({
+      ask: VOLATILITY.ask, why: VOLATILITY.why, eg: VOLATILITY.eg,
+      choices: VOLATILITY.options.map(function (o) { return o.label; }),
+      value: a[VOLATILITY.id], onChange: plainChoice(VOLATILITY.id)
+    });
+    rowIndex[VOLATILITY.id] = volRow;
+    body.appendChild(volRow);
+
+    body.appendChild(groupTitle("Como escrever a lógica", "a primeira que der Sim decide"));
+    var stopP = false;
+    PATTERN.forEach(function (row) {
+      if (stopP) return;
+      body.appendChild(questionRow({
+        ask: row.ask, why: row.why, eg: row.eg, choices: SIM_NAO,
+        value: a[row.id], onChange: onChoiceStructural(row.id)
+      }));
+      if (a[row.id] === "Sim") stopP = true;
+    });
+    body.appendChild(questionRow({
+      ask: CQRS_Q.ask, why: CQRS_Q.why, eg: CQRS_Q.eg, choices: SIM_NAO,
+      value: a[CQRS_Q.id], onChange: onChoiceStructural(CQRS_Q.id)
+    }));
+
+    if (d.pat) {
+      var pv = el("p", "verdict");
+      pv.appendChild(el("strong", null, d.pat.pattern + ":"));
+      pv.appendChild(document.createTextNode(" " + d.pat.plain + ". Monte o código com " +
+        d.pat.arch.toLowerCase() + " — " + d.pat.archPlain + ". Teste com " +
+        d.pat.test.toLowerCase() + ": " + d.pat.testPlain + "."));
+      body.appendChild(pv);
+    }
+
+    if (d.pat && d.pat.needsAggregate) {
+      body.appendChild(groupTitle("O grupo de dados que muda junto",
+        "aparece porque a lógica saiu " + d.pat.pattern.toLowerCase()));
+      AGGREGATE.forEach(function (row) {
+        var r = questionRow({
+          ask: row.ask, why: row.why, eg: row.eg,
+          choices: row.kind === "choice" ? row.choices : null,
+          placeholder: row.placeholder,
+          value: a[row.id],
+          onChange: plainChoice(row.id),
+          onInput: onText(row.id)
+        });
+        rowIndex[row.id] = r;
+        body.appendChild(r);
+      });
+    }
+
+    if (d.conflicts.length) {
+      var flags = el("div", "flags");
+      d.conflicts.forEach(function (c) { flags.appendChild(el("div", "flag-item", upper(c))); });
+      body.appendChild(flags);
+    }
+
+    wrap.appendChild(body);
+    return wrap;
+  }
+
+  function upper(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+  /* ================= nível 3: resumo ================= */
+
+  function renderSummary() {
+    var rows = document.getElementById("r-rows");
+    rows.textContent = "";
+
+    var any = state.subs.length > 0;
+    state.subs.forEach(function (sub, i) {
+      var d = derive(sub);
+      var tr = el("tr");
+      [
+        subLabel(sub, i),
+        typeLabel(d.cls.type) || "—",
+        d.pat ? d.pat.pattern : "—",
+        d.pat ? d.pat.arch : "—",
+        d.pat ? d.pat.test : "—"
+      ].forEach(function (cell) {
+        tr.appendChild(el("td", cell === "—" ? "dim" : null, cell));
+      });
+      rows.appendChild(tr);
+    });
+
+    document.getElementById("r-tablewrap").hidden = !any;
+    document.getElementById("r-empty").hidden = any;
+
+    var conflicts = [];
+    state.subs.forEach(function (sub, i) {
+      derive(sub).conflicts.forEach(function (c) {
+        conflicts.push(subLabel(sub, i) + " — " + c);
+      });
+    });
+    var cList = document.getElementById("r-conflicts");
+    cList.textContent = "";
+    conflicts.forEach(function (c) { cList.appendChild(el("div", "flag-item", c)); });
+    document.getElementById("r-conflicts-wrap").hidden = !conflicts.length;
+
+    var open = openQuestions();
+    var oList = document.getElementById("r-open");
+    oList.textContent = "";
+    open.forEach(function (o) {
+      var li = el("li");
+      var wrapSpan = el("span");
+      wrapSpan.appendChild(el("b", null, o.scope));
+      wrapSpan.appendChild(document.createTextNode(" " + o.ask));
+      li.appendChild(wrapSpan);
+      oList.appendChild(li);
+    });
+    document.getElementById("r-open-wrap").hidden = !open.length;
+  }
+
+  function renderMeters() {
+    var c = countAnswered();
+    document.getElementById("progress-bar").style.width =
+      (c.total ? Math.round((c.done / c.total) * 100) : 0) + "%";
+  }
+
+  function renderGlossary() {
+    var card = document.getElementById("gloss-card");
+    card.textContent = "";
+    GLOSSARY.forEach(function (pair) {
+      var dl = el("dl", "gloss");
+      dl.appendChild(el("dt", null, pair[0]));
+      dl.appendChild(el("dd", null, pair[1]));
+      card.appendChild(dl);
+    });
+  }
+
+  function renderAll() {
+    renderProjectCard();
+    renderSubList();
+    renderSummary();
+    renderMeters();
+  }
+
+  /* ================= criar área ================= */
+
+  function addSub() {
+    var sub = { id: newId("s"), name: "", answers: {}, order: state.subs.length };
+    state.subs.push(sub);
+    openPanels[sub.id] = true;
+    renderSubList();
+    renderSummary();
+    renderMeters();
+    saveSub(sub.id);
+    var node = document.getElementById("sub-list").children[state.subs.length - 1];
+    if (node) {
+      var input = node.querySelector(".sub-name");
+      if (input) input.focus();
+    }
+  }
+
+  /* ================= projetos ================= */
+
+  function renderProjects() {
+    var select = document.getElementById("project");
+    select.textContent = "";
+    Object.keys(state.projects).forEach(function (id) {
+      var opt = el("option", null, state.projects[id]);
+      opt.value = id;
+      if (id === state.current) opt.selected = true;
+      select.appendChild(opt);
+    });
+  }
+
+  function applyLocal(id) {
+    var local = readLocal(id) || {};
+    state.project = local.project || {};
+    state.subs = (local.subs || []).map(function (s, i) {
+      return { id: s.id, name: s.name || "", answers: s.answers || {},
+               order: typeof s.order === "number" ? s.order : i };
+    });
+    state.subs.sort(function (x, y) { return x.order - y.order; });
+  }
+
+  function loadProject(id) {
+    state.current = id;
+    openPanels = {};
+    applyLocal(id);
+    renderProjects();
+    renderAll();
+    if (!db) { setStatus("guardado neste navegador", "warn"); return; }
+
+    Promise.all([
+      db.doc("projects/" + id).get(),
+      db.collection("projects/" + id + "/subdomains").orderBy("order").get()
+    ]).then(function (res) {
+      var snap = res[0], subsSnap = res[1];
+      if (snap.exists) {
+        var data = snap.data() || {};
+        if (data.name) state.projects[id] = data.name;
+        var proj = {};
+        PROJECT_FIELDS.forEach(function (f) { proj[f.id] = data[f.id] || ""; });
+        state.project = proj;
+      }
+      state.subs = subsSnap.docs.map(function (doc, i) {
+        var data = doc.data() || {};
+        var answers = JSON.parse(JSON.stringify(data.answers || {}));
+        if (data.useCases && !answers.useCases) answers.useCases = data.useCases;
+        if (data.actor && !answers.actor) answers.actor = data.actor;
+        return { id: doc.id, name: data.name || "", answers: answers,
+                 order: typeof data.order === "number" ? data.order : i };
+      });
+      state.subs.sort(function (x, y) { return x.order - y.order; });
+      snapshotLocal();
+      renderProjects();
+      renderAll();
+      setStatus("guardado", "saved");
+    }).catch(function () { setStatus("guardado neste navegador", "warn"); });
+  }
+
+  function newProject(name) {
+    var id = newId("p");
+    state.projects[id] = name;
+    state.current = id;
+    state.project = {};
+    state.subs = [];
+    openPanels = {};
+    writeLocalIndex(state.projects);
+    renderProjects();
+    renderAll();
+    saveProject();
+  }
+
+  document.getElementById("project").addEventListener("change", function (e) {
+    loadProject(e.target.value);
+  });
+
+  document.getElementById("new-project").addEventListener("click", function () {
+    var name = prompt("Nome do projeto");
+    if (name && name.trim()) newProject(name.trim());
+  });
+
+  document.getElementById("rename-project").addEventListener("click", function () {
+    if (!state.current) return;
+    var name = prompt("Novo nome", state.projects[state.current]);
+    if (name && name.trim()) {
+      state.projects[state.current] = name.trim();
+      renderProjects();
+      saveProject();
+    }
+  });
+
+  document.getElementById("add-sub").addEventListener("click", addSub);
+
+  document.getElementById("clear").addEventListener("click", function () {
+    if (!state.current) return;
+    if (!confirm("Apagar todas as respostas de " + state.projects[state.current] + "?")) return;
+    var ids = state.subs.map(function (s) { return s.id; });
+    state.project = {};
+    state.subs = [];
+    openPanels = {};
+    snapshotLocal();
+    ids.forEach(deleteSubDoc);
+    saveProject();
+    renderAll();
+  });
+
+  /* ================= copiar ================= */
+
+  function markdown() {
+    var lines = ["# Flow — " + (state.projects[state.current] || "projeto"), ""];
+
+    lines.push("## O negócio", "");
+    PROJECT_FIELDS.forEach(function (f) {
+      var v = state.project[f.id];
+      lines.push("- **" + f.ask + "** " + (filled(v) ? String(v).replace(/\n+/g, " / ") : "_em branco_"));
+    });
+    lines.push("");
+
+    state.subs.forEach(function (sub, i) {
+      var a = sub.answers || {};
+      var d = derive(sub);
+      lines.push("## Área — " + subLabel(sub, i), "");
+      SUB_TEXT.forEach(function (f) {
+        lines.push("- **" + f.ask + "** " + (filled(a[f.id]) ? String(a[f.id]).replace(/\n+/g, " / ") : "_em branco_"));
+      });
+      lines.push("- **Tipo:** " + (typeLabel(d.cls.type) || "_em aberto_") +
+        (d.cls.reason ? " — " + d.cls.reason : ""));
+      lines.push("- **Frequência de mudança:** " + (d.vol ? d.vol.label : "_em aberto_"));
+      if (d.pat) {
+        lines.push("- **Como escrever a lógica:** " + d.pat.pattern + " (" + d.pat.plain + ")");
+        lines.push("- **Decidiu por:** " + d.pat.deciding);
+        lines.push("- **Como montar o código:** " + d.pat.arch + " (" + d.pat.archPlain + ")");
+        lines.push("- **Como testar:** " + d.pat.test + " (" + d.pat.testPlain + ")");
+        lines.push("- **Tipo que a lógica sugere:** área " + d.pat.implied);
+      } else {
+        lines.push("- **Como escrever a lógica:** _em aberto_");
+      }
+      if (d.pat && d.pat.needsAggregate) {
+        lines.push("", "### O grupo de dados que muda junto", "");
+        AGGREGATE.forEach(function (row) {
+          lines.push("- **" + row.ask + "** " +
+            (filled(a[row.id]) ? String(a[row.id]).replace(/\n+/g, " / ") : "_em branco_"));
+        });
+      }
+      if (d.conflicts.length) {
+        lines.push("", "### Respostas que se contradizem", "");
+        d.conflicts.forEach(function (c) { lines.push("- " + upper(c)); });
+      }
+      lines.push("");
+    });
+
+    if (state.subs.length) {
+      lines.push("## Resumo", "");
+      lines.push("| Área | Tipo | Como escrever a lógica | Como montar o código | Como testar |");
+      lines.push("| --- | --- | --- | --- | --- |");
+      state.subs.forEach(function (sub, i) {
+        var d = derive(sub);
+        lines.push("| " + subLabel(sub, i) + " | " + (typeLabel(d.cls.type) || "—") +
+          " | " + (d.pat ? d.pat.pattern : "—") + " | " + (d.pat ? d.pat.arch : "—") +
+          " | " + (d.pat ? d.pat.test : "—") + " |");
+      });
+      lines.push("");
+    }
+
+    var allConflicts = [];
+    state.subs.forEach(function (sub, i) {
+      derive(sub).conflicts.forEach(function (c) { allConflicts.push(subLabel(sub, i) + ": " + c); });
+    });
+    if (allConflicts.length) {
+      lines.push("## Respostas que se contradizem", "");
+      allConflicts.forEach(function (c) { lines.push("- " + c); });
+      lines.push("");
+    }
+
+    var open = openQuestions();
+    if (open.length) {
+      lines.push("## Perguntas para levar a quem entende do negócio", "");
+      open.forEach(function (o) { lines.push("- " + o.scope + ": " + o.ask); });
+      lines.push("");
+    }
+
+    return lines.join("\n");
+  }
+
+  document.getElementById("copy").addEventListener("click", function () {
+    var status = document.getElementById("copy-status");
+    navigator.clipboard.writeText(markdown()).then(function () {
+      status.textContent = "copiado";
+      status.className = "status saved";
+    }).catch(function () {
+      status.textContent = "não consegui copiar";
+      status.className = "status warn";
+    });
+    setTimeout(function () { status.textContent = ""; status.className = "status"; }, 2500);
+  });
+
+  /* ================= início ================= */
+
+  renderGlossary();
+
+  state.projects = readLocalIndex();
+  var ids = Object.keys(state.projects);
+  if (ids.length) {
+    state.current = ids[0];
+    applyLocal(state.current);
+  } else {
+    var first = newId("p");
+    state.projects[first] = "Meu projeto";
+    state.current = first;
+  }
+  renderProjects();
+  renderAll();
+  setStatus("guardado neste navegador", "warn");
+
+  if (window.claude && window.claude.use) {
+    window.claude.use("db").then(function (store) {
+      if (!store) return;
+      db = store;
+      db.collection("projects").get().then(function (snap) {
+        snap.docs.forEach(function (doc) {
+          var data = doc.data() || {};
+          state.projects[doc.id] = data.name || doc.id;
+        });
+        writeLocalIndex(state.projects);
+        var target = (state.current && state.projects[state.current])
+          ? state.current
+          : (snap.docs.length ? snap.docs[0].id : state.current);
+        loadProject(target);
+      }).catch(function () { setStatus("guardado neste navegador", "warn"); });
+    }).catch(function () {});
+  }
+})();
+</script>
+
+</body>
+</html>

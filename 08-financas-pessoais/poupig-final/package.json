@@ -1,0 +1,32 @@
+{
+  "name": "@poupig/workspace",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "check-types": "turbo run check-types",
+    "test": "turbo run test",
+    "clean": "node scripts/limpar-projeto.js",
+    "setup": "node scripts/configurar-projeto.js",
+    "loop": "node scripts/loop.js",
+    "backup": "node scripts/backup-projeto.js"
+  },
+  "devDependencies": {
+    "prettier": "^3.7.4",
+    "ts-node": "^10.9.2",
+    "turbo": "^2.10.0",
+    "typescript": "5.9.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "modules/*",
+    "packages/config/*"
+  ]
+}

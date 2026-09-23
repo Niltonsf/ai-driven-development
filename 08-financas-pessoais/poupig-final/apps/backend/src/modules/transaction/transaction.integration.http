@@ -1,0 +1,660 @@
+@baseUrl = http://localhost:4000
+@password = #Senha123
+
+# Roteiro executável em ordem (Rest Client). Cada execução registra dois usuários novos
+# (e-mails com {{$guid}}), então as contagens de `meta` abaixo valem para uma execução completa.
+# Erros seguem o formato do ApiExceptionFilter:
+# { "statusCode": 400|404, "error": "...", "message": ["CODIGO", ...], "path": "...", "timestamp": "..." }
+
+############################################################
+# Preparação — usuário A (dono das transações)
+############################################################
+
+### POST /auth/register — registrar o usuário A (espera 201 Created)
+# @name registerA
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Usuario Transacoes",
+  "email": "transacoes.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário A (espera 200 OK com token)
+# @name loginA
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerA.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@token = {{loginA.response.body.$.token}}
+
+### POST /accounts — criar a conta do usuário A (espera 201 Created)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Conta Corrente",
+  "type": "CHECKING"
+}
+
+###
+
+### GET /accounts — capturar o id da conta do usuário A (espera 200 OK)
+# @name accountsA
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{token}}
+
+###
+
+@accountId = {{accountsA.response.body.$.items[0].id}}
+
+### POST /cards — criar o cartão do usuário A (espera 201 Created)
+POST {{baseUrl}}/cards
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Cartao Principal",
+  "brand": "VISA",
+  "closingDay": 5,
+  "dueDay": 12
+}
+
+###
+
+### GET /cards — capturar o id do cartão do usuário A (espera 200 OK)
+# @name cardsA
+GET {{baseUrl}}/cards
+Authorization: Bearer {{token}}
+
+###
+
+@creditCardId = {{cardsA.response.body.$.items[0].id}}
+
+### POST /categories/default — aplicar as categorias padrão do usuário A (espera 201 Created)
+POST {{baseUrl}}/categories/default
+Authorization: Bearer {{token}}
+
+###
+
+### GET /categories — capturar uma subcategoria do usuário A (espera 200 OK)
+# @name categoriesA
+GET {{baseUrl}}/categories
+Authorization: Bearer {{token}}
+
+###
+
+@subcategoryId = {{categoriesA.response.body.$[0].subcategories[0].id}}
+
+############################################################
+# Preparação — usuário B (dono da conta usada no teste de posse)
+############################################################
+
+### POST /auth/register — registrar o usuário B (espera 201 Created)
+# @name registerB
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Outro Usuario",
+  "email": "outro.{{$guid}}@poupig.test",
+  "password": "{{password}}"
+}
+
+###
+
+### POST /auth/login — autenticar o usuário B (espera 200 OK)
+# @name loginB
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registerB.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@tokenB = {{loginB.response.body.$.token}}
+
+### POST /accounts — criar a conta do usuário B (espera 201 Created)
+POST {{baseUrl}}/accounts
+Content-Type: application/json
+Authorization: Bearer {{tokenB}}
+
+{
+  "name": "Conta do Outro",
+  "type": "CASH"
+}
+
+###
+
+### GET /accounts — capturar o id da conta do usuário B (espera 200 OK)
+# @name accountsB
+GET {{baseUrl}}/accounts
+Authorization: Bearer {{tokenB}}
+
+###
+
+@otherAccountId = {{accountsB.response.body.$.items[0].id}}
+
+### POST /cards — criar o cartão do usuário B (espera 201 Created)
+POST {{baseUrl}}/cards
+Content-Type: application/json
+Authorization: Bearer {{tokenB}}
+
+{
+  "name": "Cartao do Outro",
+  "brand": "MASTERCARD",
+  "closingDay": 10,
+  "dueDay": 20
+}
+
+###
+
+### GET /cards — capturar o id do cartão do usuário B (espera 200 OK)
+# @name cardsB
+GET {{baseUrl}}/cards
+Authorization: Bearer {{tokenB}}
+
+###
+
+@otherCreditCardId = {{cardsB.response.body.$.items[0].id}}
+
+############################################################
+# Criar
+############################################################
+
+### POST /transactions — criar com todos os vínculos (espera 201 Created com { "id": "<uuid>" })
+# @name createTransaction
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Mercado do mês",
+  "note": "Compra grande",
+  "value": 150.5,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "creditCardId": "{{creditCardId}}",
+  "subcategoryId": "{{subcategoryId}}",
+  "status": "PENDING",
+  "expectedOn": "2026-09-05"
+}
+
+###
+
+@transactionId = {{createTransaction.response.body.$.id}}
+
+### POST /transactions — `id` e `userId` do corpo são ignorados (espera 201 Created com um id novo, dono = usuário A)
+# @name createSalary
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": "00000000-0000-4000-8000-000000000001",
+  "userId": "{{loginB.response.body.$.user.id}}",
+  "name": "Salário",
+  "value": 5000,
+  "direction": "IN",
+  "accountId": "{{accountId}}",
+  "status": "SETTLED",
+  "expectedOn": "2026-09-01",
+  "settledOn": "2026-09-01"
+}
+
+###
+
+### GET /transactions/:id — a transação do corpo com userId de B pertence ao usuário A (espera 200 OK)
+GET {{baseUrl}}/transactions/{{createSalary.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+
+### POST /transactions — `value` como string numérica (espera 201 Created; a busca devolve "value": 89.9)
+# @name createLightBill
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Conta de luz",
+  "value": "89.90",
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "status": "SETTLED",
+  "expectedOn": "2026-09-10",
+  "settledOn": "2026-09-12"
+}
+
+###
+
+### POST /transactions — pendente em outubro (espera 201 Created)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Aluguel",
+  "value": 1800,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-10-05"
+}
+
+###
+
+### POST /transactions — cancelada em agosto (espera 201 Created)
+# @name createPharmacy
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Farmácia",
+  "value": 45.3,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "status": "CANCELED",
+  "expectedOn": "2026-08-20"
+}
+
+###
+
+############################################################
+# Atualizar
+############################################################
+
+### PUT /transactions/:id — efetivar, trocar o valor e limpar a observação (espera 200 OK com { "id": "<mesmo id da rota>" })
+PUT {{baseUrl}}/transactions/{{transactionId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Mercado do mês",
+  "note": null,
+  "value": 162.35,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "creditCardId": "{{creditCardId}}",
+  "subcategoryId": "{{subcategoryId}}",
+  "status": "SETTLED",
+  "expectedOn": "2026-09-05",
+  "settledOn": "2026-09-06"
+}
+
+###
+
+### PUT /transactions/:id — id inexistente (espera 404 com "message": ["TRANSACTION_NOT_FOUND"])
+PUT {{baseUrl}}/transactions/00000000-0000-4000-8000-000000000000
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Não existe",
+  "value": 10,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-09-01"
+}
+
+###
+
+############################################################
+# Buscar por id
+############################################################
+
+### GET /transactions/:id — DTO com "value": 162.35 (número), "expectedOn": "2026-09-05", "settledOn": "2026-09-06", "note": null, accountName/creditCardName/subcategoryName/categoryName preenchidos e sem deletedAt (espera 200 OK)
+GET {{baseUrl}}/transactions/{{transactionId}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions/:id — valor enviado como string (espera 200 OK com "value": 89.9, "creditCardId": null, "creditCardName": null)
+GET {{baseUrl}}/transactions/{{createLightBill.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions/:id — transação de outro usuário (espera 404 com "message": ["TRANSACTION_NOT_FOUND"])
+GET {{baseUrl}}/transactions/{{transactionId}}
+Authorization: Bearer {{tokenB}}
+
+###
+
+############################################################
+# Listar
+############################################################
+
+### GET /transactions — página 1 (espera 200 OK: 3 itens — Aluguel, Conta de luz, Mercado do mês — e "meta": { "page": 1, "pageSize": 3, "total": 5, "totalPages": 2 })
+GET {{baseUrl}}/transactions?page=1&pageSize=3
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — página 2 (espera 200 OK: 2 itens — Salário, Farmácia — e "meta": { "page": 2, "pageSize": 3, "total": 5, "totalPages": 2 })
+GET {{baseUrl}}/transactions?page=2&pageSize=3
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — teto de pageSize (espera 200 OK com "meta.pageSize": 100) e page inválida normalizada para 1
+GET {{baseUrl}}/transactions?page=0&pageSize=500
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — busca parcial sem diferenciar maiúsculas (espera 200 OK só com "Mercado do mês")
+GET {{baseUrl}}/transactions?search=MERC
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — status, direção e período (espera 200 OK só com "Conta de luz" e "Mercado do mês", nessa ordem)
+GET {{baseUrl}}/transactions?status=SETTLED&direction=OUT&expectedFrom=2026-09-01&expectedTo=2026-09-30
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — período com um só lado (espera 200 OK com 4 itens: tudo a partir de 2026-09-01, sem "Farmácia")
+GET {{baseUrl}}/transactions?expectedFrom=2026-09-01
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — filtro por entrada e por conta (espera 200 OK só com "Salário")
+GET {{baseUrl}}/transactions?direction=IN&accountId={{accountId}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — direção fora do conjunto (espera 400 com "message": ["INVALID_DIRECTION"])
+GET {{baseUrl}}/transactions?direction=INFLOW
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — status fora do conjunto (espera 400 com "message": ["INVALID_TRANSACTION_STATUS"])
+GET {{baseUrl}}/transactions?status=COMPLETED
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — data de período inválida (espera 400 com "message": ["INVALID_DATE_ONLY"])
+GET {{baseUrl}}/transactions?expectedFrom=2026-02-30
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — outro usuário não vê as transações de A (espera 200 OK com "data": [] e "meta.total": 0)
+GET {{baseUrl}}/transactions
+Authorization: Bearer {{tokenB}}
+
+###
+
+############################################################
+# Listar — filtros de cartão e tamanho de página
+############################################################
+
+### POST /cards — criar um segundo cartão do usuário A (espera 201 Created)
+POST {{baseUrl}}/cards
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Cartao Reserva",
+  "brand": "ELO",
+  "closingDay": 20,
+  "dueDay": 28
+}
+
+###
+
+### GET /cards — capturar o id do segundo cartão do usuário A (espera 200 OK; a lista é ordenada por criação, então é o items[1])
+# @name cardsA2
+GET {{baseUrl}}/cards
+Authorization: Bearer {{token}}
+
+###
+
+@reserveCreditCardId = {{cardsA2.response.body.$.items[1].id}}
+
+### POST /transactions — compra no segundo cartão em outubro (espera 201 Created; o usuário A passa a ter 6 transações, 2 delas com cartão)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Streaming",
+  "value": 39.9,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "creditCardId": "{{reserveCreditCardId}}",
+  "expectedOn": "2026-10-15"
+}
+
+###
+
+### GET /transactions — por creditCardId (espera 200 OK só com "Mercado do mês" e "meta.total": 1)
+GET {{baseUrl}}/transactions?creditCardId={{creditCardId}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — onlyCreditCard=true (espera 200 OK com "Streaming" e "Mercado do mês", nessa ordem, e "meta.total": 2)
+GET {{baseUrl}}/transactions?onlyCreditCard=true
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — onlyCreditCard=1 também liga o filtro (espera 200 OK com "Streaming" e "Mercado do mês" e "meta.total": 2)
+GET {{baseUrl}}/transactions?onlyCreditCard=1
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — creditCardId prevalece sobre onlyCreditCard (espera 200 OK só com "Mercado do mês" e "meta.total": 1)
+GET {{baseUrl}}/transactions?creditCardId={{creditCardId}}&onlyCreditCard=true
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — creditCardId com o período de setembro (espera 200 OK só com "Mercado do mês" e "meta.total": 1)
+GET {{baseUrl}}/transactions?creditCardId={{creditCardId}}&expectedFrom=2026-09-01&expectedTo=2026-09-30
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — creditCardId do segundo cartão com o período de setembro (espera 200 OK com "data": [] e "meta.total": 0; a compra dele é de outubro)
+GET {{baseUrl}}/transactions?creditCardId={{reserveCreditCardId}}&expectedFrom=2026-09-01&expectedTo=2026-09-30
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — onlyCreditCard=true com o período de outubro (espera 200 OK só com "Streaming" e "meta.total": 1)
+GET {{baseUrl}}/transactions?onlyCreditCard=true&expectedFrom=2026-10-01&expectedTo=2026-10-31
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — os dois filtros de cartão com o período de setembro (espera 200 OK só com "Mercado do mês" e "meta.total": 1)
+GET {{baseUrl}}/transactions?creditCardId={{creditCardId}}&onlyCreditCard=true&expectedFrom=2026-09-01&expectedTo=2026-09-30
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — creditCardId só com espaços vira sem filtro (espera 200 OK com "meta.total": 6)
+GET {{baseUrl}}/transactions?creditCardId=%20
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — creditCardId de cartão de outro usuário (espera 200 OK com "data": [] e "meta.total": 0, sem 404)
+GET {{baseUrl}}/transactions?creditCardId={{otherCreditCardId}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — onlyCreditCard=yes não estreita a lista (espera 200 OK com "meta.total": 6, com e sem cartão)
+GET {{baseUrl}}/transactions?onlyCreditCard=yes
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — pageSize=100 aceito (espera 200 OK com "meta.pageSize": 100)
+GET {{baseUrl}}/transactions?pageSize=100
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — pageSize=101 limitado ao teto (espera 200 OK com "meta.pageSize": 100)
+GET {{baseUrl}}/transactions?pageSize=101
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Falhas de validação
+############################################################
+
+### POST /transactions — SETTLED sem settledOn (espera 400 com "message" contendo "TRANSACTION_SETTLED_ON_REQUIRED")
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Sem data de efetivação",
+  "value": 10,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "status": "SETTLED",
+  "expectedOn": "2026-09-01"
+}
+
+###
+
+### POST /transactions — valor zero (espera 400 com "message" contendo "INVALID_MONEY_AMOUNT")
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Valor zero",
+  "value": 0,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-09-01"
+}
+
+###
+
+### POST /transactions — valor não numérico (espera 400 com "message" contendo "INVALID_MONEY_AMOUNT")
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Valor texto",
+  "value": "abc",
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-09-01"
+}
+
+###
+
+### POST /transactions — direção fora do conjunto (espera 400 com "message" contendo "INVALID_DIRECTION")
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Direção inválida",
+  "value": 10,
+  "direction": "INFLOW",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-09-01"
+}
+
+###
+
+### POST /transactions — conta de outro usuário (espera 400 com "message": ["TRANSACTION_ACCOUNT_NOT_FOUND"])
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Conta alheia",
+  "value": 10,
+  "direction": "OUT",
+  "accountId": "{{otherAccountId}}",
+  "expectedOn": "2026-09-01"
+}
+
+###
+
+############################################################
+# Excluir
+############################################################
+
+### DELETE /transactions/:id — excluir logicamente (espera 200 OK com { "success": true })
+DELETE {{baseUrl}}/transactions/{{createPharmacy.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions/:id — buscar a excluída (espera 404 com "message": ["TRANSACTION_NOT_FOUND"])
+GET {{baseUrl}}/transactions/{{createPharmacy.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+
+### DELETE /transactions/:id — excluir de novo (espera 404 com "message": ["TRANSACTION_NOT_FOUND"])
+DELETE {{baseUrl}}/transactions/{{createPharmacy.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+
+### GET /transactions — a excluída some da lista (espera 200 OK com "meta.total": 5)
+GET {{baseUrl}}/transactions
+Authorization: Bearer {{token}}
+
+###
+
+############################################################
+# Sem autenticação
+############################################################
+
+### GET /transactions sem token (espera 401 Unauthorized)
+GET {{baseUrl}}/transactions
+
+###
+
+### POST /transactions sem token (espera 401 Unauthorized)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+
+{
+  "name": "Sem auth",
+  "value": 10,
+  "direction": "OUT",
+  "accountId": "{{accountId}}",
+  "expectedOn": "2026-09-01"
+}
+
+###
+
+### DELETE /transactions/:id sem token (espera 401 Unauthorized)
+DELETE {{baseUrl}}/transactions/{{transactionId}}

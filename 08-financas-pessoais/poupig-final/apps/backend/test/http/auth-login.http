@@ -1,0 +1,28 @@
+@baseUrl = http://localhost:4000
+
+### Login with valid credentials (expects 200 OK with token and user)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "usuario@formacao.dev",
+  "password": "#Senha123"
+}
+
+### Login with unknown email (expects 401 Unauthorized)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "nao.existe@poupig.test",
+  "password": "#Senha123"
+}
+
+### Login with wrong password (expects 401 Unauthorized)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "teste.integracao@poupig.test",
+  "password": "SenhaErrada99"
+}
